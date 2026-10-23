@@ -17,16 +17,12 @@
       "value": "用于扫描并展示周围蓝牙设备"
     },
     {
-      "name": "permission_internet_reason",
-      "value": "用于打开隐私政策网页"
-    },
-    {
       "name": "home_title",
       "value": "周围蓝牙设备"
     },
     {
       "name": "home_subtitle",
-      "value": "查看附近正在广播的蓝牙设备，数据仅在本机展示"
+      "value": "点击下方按钮开始扫描周围蓝牙设备，数据仅在本机展示"
     },
     {
       "name": "btn_view_devices",
@@ -35,10 +31,6 @@
     {
       "name": "btn_stop_scan",
       "value": "停止扫描"
-    },
-    {
-      "name": "btn_skip_intro",
-      "value": "跳过"
     },
     {
       "name": "scanning_hint",

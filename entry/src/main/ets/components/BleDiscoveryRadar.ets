@@ -15,13 +15,14 @@ interface ProjectedPoint {
 const CANVAS_SIZE: number = 280;
 const PARTICLE_COUNT: number = 36;
 const SPHERE_RADIUS: number = 1;
+const FRAME_MS: number = 33;
 
 @Component
 export struct BleDiscoveryRadar {
   @Prop active: boolean = true;
   private settings: RenderingContextSettings = new RenderingContextSettings(true);
   private ctx: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
-  private rafId: number = 0;
+  private tickTimerId: number = -1;
   private particles: Vec3[] = [];
   private startMs: number = 0;
   private disposed: boolean = false;
@@ -33,10 +34,24 @@ export struct BleDiscoveryRadar {
 
   aboutToDisappear(): void {
     this.disposed = true;
-    if (this.rafId !== 0) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = 0;
+    this.stopTick();
+  }
+
+  private stopTick(): void {
+    if (this.tickTimerId >= 0) {
+      clearInterval(this.tickTimerId);
+      this.tickTimerId = -1;
     }
+  }
+
+  private startTick(): void {
+    this.stopTick();
+    this.tickTimerId = setInterval(() => {
+      if (this.disposed || !this.active) {
+        return;
+      }
+      this.drawFrame();
+    }, FRAME_MS) as number;
   }
 
   private ensureParticles(): void {
@@ -192,15 +207,6 @@ export struct BleDiscoveryRadar {
     ctx.fillText('BT', cx, cy);
   }
 
-  private tick = (): void => {
-    if (this.disposed || !this.active) {
-      this.rafId = 0;
-      return;
-    }
-    this.drawFrame();
-    this.rafId = requestAnimationFrame(this.tick);
-  };
-
   build() {
     Canvas(this.ctx)
       .width(CANVAS_SIZE)
@@ -212,8 +218,9 @@ export struct BleDiscoveryRadar {
         }
         this.ensureParticles();
         this.startMs = Date.now();
-        if (this.active && this.rafId === 0) {
-          this.tick();
+        if (this.active) {
+          this.drawFrame();
+          this.startTick();
         }
       })
   }

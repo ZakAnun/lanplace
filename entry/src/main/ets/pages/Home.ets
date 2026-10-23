@@ -1,5 +1,5 @@
 import { common, Want } from '@kit.AbilityKit';
-import { promptAction } from '@kit.ArkUI';
+import { PromptAction } from '@kit.ArkUI';
 import { AppleTheme } from '../common/AppleTheme';
 import { PRIVACY_POLICY_URL } from '../common/Constants';
 import { PermissionHelper } from '../common/PermissionHelper';
@@ -22,26 +22,38 @@ enum UiPhase {
 struct Home {
   @State phase: UiPhase = UiPhase.Idle;
   @State devices: ScannedDevice[] = [];
-  private context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
   private privacyDialogController: CustomDialogController | null = null;
   private actionInFlight: boolean = false;
 
+  private abilityContext(): common.UIAbilityContext {
+    return this.getUIContext().getHostContext() as common.UIAbilityContext;
+  }
+
+  private prompt(): PromptAction {
+    return this.getUIContext().getPromptAction();
+  }
+
+  private showToast(message: string): void {
+    this.prompt().showToast({ message });
+  }
+
   aboutToAppear(): void {
+    const context = this.abilityContext();
     this.privacyDialogController = new CustomDialogController({
       builder: PrivacyConsentDialog({
         onAgree: () => {
           this.privacyDialogController?.close();
-          PrivacyConsentHelper.setPrivacyAccepted(this.context, true).then(() => {
+          PrivacyConsentHelper.setPrivacyAccepted(context, true).then(() => {
             this.beginScanFlow().catch(() => {
-              promptAction.showToast({ message: '操作失败，请重试' });
+              this.showToast('操作失败，请重试');
             });
           }).catch(() => {
-            promptAction.showToast({ message: '无法保存隐私同意状态' });
+            this.showToast('无法保存隐私同意状态');
           });
         },
         onDecline: () => {
           this.privacyDialogController?.close();
-          this.context.terminateSelf();
+          context.terminateSelf();
         },
         onOpenPolicy: () => {
           this.openPrivacyPolicy();
@@ -50,7 +62,7 @@ struct Home {
       autoCancel: false,
       alignment: DialogAlignment.Center
     });
-    PrivacyConsentHelper.isPrivacyAccepted(this.context).then((accepted) => {
+    PrivacyConsentHelper.isPrivacyAccepted(context).then((accepted) => {
       if (!accepted) {
         this.privacyDialogController?.open();
       }
@@ -76,8 +88,8 @@ struct Home {
       entities: ['entity.system.browsable'],
       uri: PRIVACY_POLICY_URL
     };
-    this.context.startAbility(want).catch(() => {
-      promptAction.showToast({ message: '无法打开隐私政策链接' });
+    this.abilityContext().startAbility(want).catch(() => {
+      this.showToast('无法打开隐私政策链接');
     });
   }
 
@@ -94,19 +106,19 @@ struct Home {
 
   private async onPrimaryAction(): Promise<void> {
     if (this.actionInFlight || BleScanService.isScanning()) {
-      promptAction.showToast({ message: '正在扫描中' });
+      this.showToast('正在扫描中');
       return;
     }
     try {
       this.actionInFlight = true;
-      const accepted = await PrivacyConsentHelper.isPrivacyAccepted(this.context);
+      const accepted = await PrivacyConsentHelper.isPrivacyAccepted(this.abilityContext());
       if (!accepted) {
         this.privacyDialogController?.open();
         return;
       }
       await this.beginScanFlow();
     } catch (_err) {
-      promptAction.showToast({ message: '操作失败，请重试' });
+      this.showToast('操作失败，请重试');
     } finally {
       this.actionInFlight = false;
     }
@@ -114,16 +126,17 @@ struct Home {
 
   private async beginScanFlow(): Promise<void> {
     if (BleScanService.isScanning()) {
-      promptAction.showToast({ message: '正在扫描中' });
+      this.showToast('正在扫描中');
       return;
     }
     if (!BluetoothHelper.isEnabled()) {
-      promptAction.showToast({ message: '请先开启系统蓝牙' });
+      this.showToast('请先开启系统蓝牙');
       return;
     }
-    const hasBt = await PermissionHelper.hasBluetoothPermission(this.context);
+    const context = this.abilityContext();
+    const hasBt = await PermissionHelper.hasBluetoothPermission(context);
     if (!hasBt) {
-      const ok = await promptAction.showDialog({
+      const ok = await this.prompt().showDialog({
         title: '蓝牙权限',
         message: '需要蓝牙权限以扫描周围设备，数据仅在本机展示。',
         buttons: [
@@ -134,9 +147,9 @@ struct Home {
       if (ok.index !== 1) {
         return;
       }
-      const granted = await PermissionHelper.requestBluetoothPermission(this.context);
+      const granted = await PermissionHelper.requestBluetoothPermission(context);
       if (!granted) {
-        promptAction.showToast({ message: '未授予蓝牙权限，可在系统设置中开启' });
+        this.showToast('未授予蓝牙权限，可在系统设置中开启');
         return;
       }
     }
@@ -152,11 +165,11 @@ struct Home {
         }
       );
       if (!started) {
-        promptAction.showToast({ message: '正在扫描中' });
+        this.showToast('正在扫描中');
         this.phase = UiPhase.Idle;
       }
     } catch (e) {
-      promptAction.showToast({ message: this.scanErrorMessage(e as Error) });
+      this.showToast(this.scanErrorMessage(e as Error));
       this.phase = UiPhase.Idle;
     }
   }
