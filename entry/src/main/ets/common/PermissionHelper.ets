@@ -15,11 +15,14 @@ export class PermissionHelper {
   static async requestBluetoothPermission(context: common.UIAbilityContext): Promise<boolean> {
     const atManager = abilityAccessCtrl.createAtManager();
     const result = await atManager.requestPermissionsFromUser(context, [BLUETOOTH_PERMISSION]);
-    if (result.authResults.length > 0 &&
-      result.authResults[0] === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
-      return true;
-    }
+    return result.authResults.length > 0 &&
+      result.authResults[0] === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED;
+  }
+
+  static async requestBluetoothPermissionFromSetting(context: common.UIAbilityContext): Promise<boolean> {
+    const atManager = abilityAccessCtrl.createAtManager();
     const settingResult = await atManager.requestPermissionOnSetting(context, [BLUETOOTH_PERMISSION]);
-    return settingResult.length > 0 && settingResult[0] === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED;
+    return settingResult.length > 0 &&
+      settingResult[0] === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED;
   }
 }

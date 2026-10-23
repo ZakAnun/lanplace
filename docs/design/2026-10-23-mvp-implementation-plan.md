@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 交付单页 HarmonyOS MVP：入场动效 → 隐私同意 → 蓝牙授权 → BLE 扫描 → 只读设备列表（含广播解析），DESIGN-apple 视觉，无 GPS/DB/账号。
+**Goal:** 交付单页 HarmonyOS MVP：Home Idle（发现动效）→ 隐私同意 → 蓝牙授权 → BLE 扫描 → 只读设备列表（含广播解析），DESIGN-apple 视觉，无 GPS/DB/账号。
 
-**Architecture:** `Home.ets` 驱动 UI 状态机 S0–S4；`BleScanService` 封装扫描；`BleAdvertParser` 解析 AD；`PermissionHelper` + `PrivacyConsentHelper` 处理 P0/蓝牙授权；数据仅 `@State` 内存 Map。
+**Architecture:** `Home.ets` 驱动 UI 状态机 **Idle / Scanning / Results**；`BleScanService` 封装扫描；`BleAdvertParser` 解析 AD；`PermissionHelper` + `PrivacyConsentHelper` 处理 P0/蓝牙授权；数据仅 `@State` 内存 Map。
 
 **Tech Stack:** HarmonyOS Stage, ArkTS, ArkUI, `@kit.ConnectivityKit` BLE, `@kit.AbilityKit` 权限, Preferences, Hypium。
 
@@ -14,7 +14,7 @@
 
 - 包名 `com.lanplace.bluescopes`；中文名 **蓝域**；英文 **BlueScopes**；开发者 **李铭淋**；隐私邮箱 **linhenji@163.com**。
 - 单页面 `pages/Home.ets`；**无** GPS、50m Place、多 Tab、列表项点击、配对/连接、持久化 DB、第三方 SDK。
-- 权限首版：`ohos.permission.ACCESS_BLUETOOTH`；`ohos.permission.INTERNET` 仅用于打开隐私政策 URL（系统浏览器 `startAbility` action.viewData）。
+- 权限首版：仅 `ohos.permission.ACCESS_BLUETOOTH`；隐私政策经系统浏览器打开，**不声明** `INTERNET`。
 - 扫描超时 **30s**；列表按 **RSSI 降序**；去重键 **deviceId**。
 - UI：主色 `#0066cc`，背景 `#ffffff` / `#f5f5f7`，pill 按钮，列表无阴影。
 - `compatibleSdkVersion`: `6.1.1(24)`，`modelVersion`: `26.0.0`，deviceTypes `phone`。
@@ -178,18 +178,13 @@ setTimeout(() => stop(), SCAN_TIMEOUT_MS);
     "name": "ohos.permission.ACCESS_BLUETOOTH",
     "reason": "$string:permission_bluetooth_reason",
     "usedScene": { "abilities": ["EntryAbility"], "when": "inuse" }
-  },
-  {
-    "name": "ohos.permission.INTERNET",
-    "reason": "$string:permission_internet_reason",
-    "usedScene": { "abilities": ["EntryAbility"], "when": "inuse" }
   }
 ]
 ```
 
-- [ ] **Step 2: strings** — `permission_bluetooth_reason`: 用于扫描并展示周围蓝牙设备；`permission_internet_reason`: 用于打开隐私政策网页；占位 UI 文案
+- [ ] **Step 2: strings** — `permission_bluetooth_reason`: 用于扫描并展示周围蓝牙设备；占位 UI 文案
 
-- [ ] **Step 3: Commit** — `feat: declare bluetooth and internet permissions`
+- [ ] **Step 3: Commit** — `feat: declare bluetooth permission`
 
 ---
 
@@ -231,28 +226,27 @@ setTimeout(() => stop(), SCAN_TIMEOUT_MS);
 
 **Files:**
 - Create: `entry/src/main/ets/pages/Home.ets`
+- Create: `entry/src/main/ets/components/BleDiscoveryRadar.ets`（Canvas 发现动效）
 - Modify: `entry/src/main/resources/base/profile/main_pages.json`
 - Modify: `entry/src/main/ets/entryability/EntryAbility.ets`
-- Delete or keep unused: `entry/src/main/ets/pages/Index.ets`（从 main_pages 移除）
+- Delete: `entry/src/main/ets/pages/Index.ets`
 
 **Interfaces:**
 - Consumes: 全部前述模块
 
-- [ ] **Step 1: enum UiPhase { Intro, Idle, Scanning, Results }**
+- [ ] **Step 1: enum UiPhase { Idle, Scanning, Results }**（无 Intro/Splash 页）
 
-- [ ] **Step 2: S0 Intro** — `animateTo` 背景色 + 2–3 个 Circle scale/opacity；右上角「跳过」→ `setSkipIntro` → Idle
+- [ ] **Step 2: Idle** — `BleDiscoveryRadar` + 标题 + `查看周围蓝牙设备`；首次启动 P0 弹窗
 
-- [ ] **Step 3: S1 Idle** — 标题占位 + `查看周围蓝牙设备` Button.onClick → 检查 privacy → dialog → bluetooth rationale AlertDialog → request → start scan
+- [ ] **Step 3: Scanning** — LoadingProgress + `停止扫描` + 实时列表
 
-- [ ] **Step 4: S3 Scanning** — LoadingProgress + `停止扫描` Button
+- [ ] **Step 4: Results** — 只读 `List` + 再次扫描按钮；**禁止**列表项 `.onClick`
 
-- [ ] **Step 5: S4 List** — `List({ space: 12 }) { ForEach(devices sorted by rssi) { DeviceListItem } }` **禁止** `.onClick` on items
+- [ ] **Step 5: main_pages** — `["pages/Home"]`；`expandSafeArea` 避让系统栏
 
-- [ ] **Step 6: main_pages** — `["pages/Home"]`；EntryAbility `loadContent('pages/Home')`
+- [ ] **Step 6: aboutToDisappear / onPageHide** — 停扫；后台暂停雷达动画
 
-- [ ] **Step 7: aboutToDisappear** — `BleScanService.stop()`
-
-- [ ] **Step 8: Commit** — `feat: home page with intro animation and ble list`
+- [ ] **Step 7: Commit** — `feat: home page with ble discovery animation and list`
 
 ---
 
@@ -261,10 +255,10 @@ setTimeout(() => stop(), SCAN_TIMEOUT_MS);
 **Files:**
 - Create: `docs/legal/privacy-zh.html`（内容来自 `docs/design/privacy-policy-mvp-zh.md`）
 
-- [ ] **Step 1:** HTML 静态页，含李铭淋、linhenji@163.com、ACCESS_BLUETOOTH、INTERNET 说明、无第三方 SDK
+- [ ] **Step 1:** HTML 静态页，含李铭淋、linhenji@163.com、ACCESS_BLUETOOTH、无 INTERNET、无第三方 SDK
 
 - [ ] **Step 2: 真机 UAT**
-  - 首次启动 P0 → 同意 → 动效 → 扫描 → 列表更新
+  - 首次启动 P0 → 同意 → Idle 动效 → 扫描 → 列表更新
   - 拒绝蓝牙 → 提示去设置
   - 列表项点击无反应
   - 杀进程再开列表为空（内存不持久化）
@@ -299,10 +293,10 @@ setTimeout(() => stop(), SCAN_TIMEOUT_MS);
 | DESIGN-apple | 1, 7, 8 |
 | 无 GPS/DB | 全局约束 |
 | 隐私政策 | 6, 9 |
-| INTERNET 仅政策 | 5, 6 |
+| 无 INTERNET（浏览器打开政策） | 5, 6 |
 | 开发者李铭淋 | 9 HTML |
 
-**Placeholder scan:** `PRIVACY_POLICY_URL` 需在 Pages 上线后替换为最终 URL（Step 1 已给占位域名模式）。
+**Pages:** `PRIVACY_POLICY_URL` → `https://zakanun.github.io/lanplace/legal/privacy-zh.html`（仓库 `docs/` 发布）。
 
 ---
 

@@ -19,7 +19,7 @@ const FRAME_MS: number = 33;
 
 @Component
 export struct BleDiscoveryRadar {
-  @Prop active: boolean = true;
+  @Prop @Watch('onActiveChanged') active: boolean = true;
   private settings: RenderingContextSettings = new RenderingContextSettings(true);
   private ctx: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
   private tickTimerId: number = -1;
@@ -30,6 +30,17 @@ export struct BleDiscoveryRadar {
   aboutToAppear(): void {
     this.disposed = false;
     this.ensureParticles();
+  }
+
+  onActiveChanged(): void {
+    if (this.disposed) {
+      return;
+    }
+    if (this.active) {
+      this.startTick();
+    } else {
+      this.stopTick();
+    }
   }
 
   aboutToDisappear(): void {

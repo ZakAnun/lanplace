@@ -24,8 +24,20 @@ export default function bleAdvertParserTest() {
       expect(parsed.serviceUuids[0]).assertContain('180a');
     });
 
+    it('parses_uuid128_little_endian', 0, () => {
+      const uuidBytes: number[] = [
+        0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80,
+        0x00, 0x10, 0x00, 0x00, 0x0D, 0x18, 0x00, 0x00
+      ];
+      const ad: number[] = [17, 0x06, ...uuidBytes];
+      const parsed = parseAdvertData(new Uint8Array(ad).buffer);
+      expect(parsed.serviceUuids.length).assertEqual(1);
+      expect(parsed.serviceUuids[0]).assertEqual('0000180d-0000-1000-8000-00805f9b34fb');
+    });
+
     it('mergeScanResult_prefers_advert_name', 0, () => {
-      const ad: number[] = [5, 0x09, ...Array.from('AdvName').map(c => c.charCodeAt(0))];
+      const name = 'AdvName';
+      const ad: number[] = [name.length + 1, 0x09, ...Array.from(name).map(c => c.charCodeAt(0))];
       const merged = mergeScanResult('id-1', '', -55, true, new Uint8Array(ad).buffer);
       expect(merged.displayName).assertEqual('AdvName');
       expect(merged.rssi).assertEqual(-55);

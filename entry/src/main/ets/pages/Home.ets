@@ -22,6 +22,7 @@ enum UiPhase {
 struct Home {
   @State phase: UiPhase = UiPhase.Idle;
   @State devices: ScannedDevice[] = [];
+  @State radarActive: boolean = true;
   private privacyDialogController: CustomDialogController | null = null;
   private actionInFlight: boolean = false;
 
@@ -76,10 +77,15 @@ struct Home {
   }
 
   onPageHide(): void {
+    this.radarActive = false;
     if (BleScanService.isScanning()) {
       BleScanService.stop({ emitUpdate: true, notifyComplete: true });
       this.phase = UiPhase.Results;
     }
+  }
+
+  onPageShow(): void {
+    this.radarActive = true;
   }
 
   private openPrivacyPolicy(): void {
@@ -147,10 +153,24 @@ struct Home {
       if (ok.index !== 1) {
         return;
       }
-      const granted = await PermissionHelper.requestBluetoothPermission(context);
+      let granted = await PermissionHelper.requestBluetoothPermission(context);
       if (!granted) {
-        this.showToast('未授予蓝牙权限，可在系统设置中开启');
-        return;
+        const goSetting = await this.prompt().showDialog({
+          title: '需要蓝牙权限',
+          message: '扫描需要蓝牙权限。您可稍后再试，或前往系统设置开启。',
+          buttons: [
+            { text: '取消', color: AppleTheme.INK_MUTED },
+            { text: '去设置', color: AppleTheme.PRIMARY }
+          ]
+        });
+        if (goSetting.index !== 1) {
+          return;
+        }
+        granted = await PermissionHelper.requestBluetoothPermissionFromSetting(context);
+        if (!granted) {
+          this.showToast('仍未授予蓝牙权限');
+          return;
+        }
       }
     }
     this.phase = UiPhase.Scanning;
@@ -186,7 +206,7 @@ struct Home {
   @Builder
   idleView() {
     Column({ space: 20 }) {
-      BleDiscoveryRadar({ active: true })
+      BleDiscoveryRadar({ active: this.radarActive })
       Text($r('app.string.home_title'))
         .fontSize(AppleTheme.FONT_TITLE)
         .fontWeight(FontWeight.Medium)
@@ -222,7 +242,7 @@ struct Home {
   @Builder
   scanningView() {
     Column({ space: 16 }) {
-      BleDiscoveryRadar({ active: true })
+      BleDiscoveryRadar({ active: this.radarActive })
       Row({ space: 12 }) {
         LoadingProgress()
           .width(28)
@@ -305,5 +325,6 @@ struct Home {
     }
     .width('100%')
     .height('100%')
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }
 }

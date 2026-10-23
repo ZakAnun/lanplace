@@ -50,7 +50,7 @@ function parseUuid32(data: Uint8Array, offset: number, length: number, out: stri
 function parseUuid128(data: Uint8Array, offset: number, length: number, out: string[]): void {
   for (let i = 0; i + 15 < length; i += 16) {
     const p = (idx: number): string => data[offset + i + idx].toString(16).padStart(2, '0');
-    const uuid = `${p(3)}${p(2)}${p(1)}${p(0)}-${p(5)}${p(4)}-${p(7)}${p(6)}-${p(8)}${p(9)}-${p(10)}${p(11)}${p(12)}${p(13)}${p(14)}${p(15)}`;
+    const uuid = `${p(15)}${p(14)}${p(13)}${p(12)}-${p(11)}${p(10)}-${p(9)}${p(8)}-${p(7)}${p(6)}-${p(5)}${p(4)}${p(3)}${p(2)}${p(1)}${p(0)}`;
     out.push(uuid);
   }
 }
