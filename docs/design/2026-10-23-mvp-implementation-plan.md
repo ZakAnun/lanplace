@@ -62,7 +62,7 @@ export const SCAN_TIMEOUT_MS: number = 30000;
 export const PRIVACY_ACCEPTED_KEY: string = 'privacy_accepted_v1';
 export const SKIP_INTRO_KEY: string = 'skip_intro_animation';
 /** 替换为 GitHub Pages 实际上线地址 */
-export const PRIVACY_POLICY_URL: string = 'https://zakanun.github.io/lanplace-bt/privacy-zh.html';
+export const PRIVACY_POLICY_URL: string = 'https://zakanun.github.io/lanplace/legal/privacy-zh.html';
 ```
 
 - [ ] **Step 2: AppleTheme.ets** — 导出上述 hex/fp 常量（与 MVP-product-spec §3 一致）

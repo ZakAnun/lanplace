@@ -13,6 +13,7 @@
 | 中文名 | 蓝域 |
 | 英文名 | BlueScopes（展示不用 `-`，强调 place scopes） |
 | 包名 | com.lanplace.bluescopes |
+| 仓库 / 目录 | **lanplace**（GitHub: `ZakAnun/lanplace`） |
 | Logo | 纯色 Action Blue 底 + 白色 **Z** 主形（可含蓝牙/定位点缀） |
 
 ---

@@ -29,7 +29,7 @@
         "description": "$string:EntryAbility_desc",
         "icon": "$media:layered_image",
         "label": "$string:EntryAbility_label",
-        "startWindowIcon": "$media:foreground",
+        "startWindowIcon": "$media:start_window_icon",
         "startWindowBackground": "$color:primary",
         "exported": true,
         "skills": [
