@@ -15,7 +15,8 @@ export class PermissionHelper {
   static async requestBluetoothPermission(context: common.UIAbilityContext): Promise<boolean> {
     const atManager = abilityAccessCtrl.createAtManager();
     const result = await atManager.requestPermissionsFromUser(context, [BLUETOOTH_PERMISSION]);
-    if (result.authResults.length > 0 && result.authResults[0] === 0) {
+    if (result.authResults.length > 0 &&
+      result.authResults[0] === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
       return true;
     }
     const settingResult = await atManager.requestPermissionOnSetting(context, [BLUETOOTH_PERMISSION]);
