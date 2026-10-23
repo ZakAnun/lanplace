@@ -1,3 +1,4 @@
+import { util } from '@kit.ArkTS';
 import { ScannedDevice } from '../model/ScannedDevice';
 
 const AD_TYPE_FLAGS = 0x01;
@@ -25,6 +26,10 @@ function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(':');
 }
 
+function readInt8(byte: number): number {
+  return byte > 127 ? byte - 256 : byte;
+}
+
 function parseUuid16(data: Uint8Array, offset: number, length: number, out: string[]): void {
   for (let i = 0; i + 1 < length; i += 2) {
     const uuid = `0000${data[offset + i + 1].toString(16).padStart(2, '0')}${data[offset + i].toString(16).padStart(2, '0')}-0000-1000-8000-00805f9b34fb`;
@@ -32,12 +37,39 @@ function parseUuid16(data: Uint8Array, offset: number, length: number, out: stri
   }
 }
 
-function decodeUtf8Name(data: Uint8Array, offset: number, length: number): string {
-  let s = '';
-  for (let i = 0; i < length; i++) {
-    s += String.fromCharCode(data[offset + i]);
+function parseUuid32(data: Uint8Array, offset: number, length: number, out: string[]): void {
+  for (let i = 0; i + 3 < length; i += 4) {
+    const b0 = data[offset + i].toString(16).padStart(2, '0');
+    const b1 = data[offset + i + 1].toString(16).padStart(2, '0');
+    const b2 = data[offset + i + 2].toString(16).padStart(2, '0');
+    const b3 = data[offset + i + 3].toString(16).padStart(2, '0');
+    out.push(`${b3}${b2}${b1}${b0}-0000-1000-8000-00805f9b34fb`);
   }
-  return s;
+}
+
+function parseUuid128(data: Uint8Array, offset: number, length: number, out: string[]): void {
+  for (let i = 0; i + 15 < length; i += 16) {
+    const p = (idx: number): string => data[offset + i + idx].toString(16).padStart(2, '0');
+    const uuid = `${p(3)}${p(2)}${p(1)}${p(0)}-${p(5)}${p(4)}-${p(7)}${p(6)}-${p(8)}${p(9)}-${p(10)}${p(11)}${p(12)}${p(13)}${p(14)}${p(15)}`;
+    out.push(uuid);
+  }
+}
+
+function decodeUtf8Name(data: Uint8Array, offset: number, length: number): string {
+  if (length <= 0) {
+    return '';
+  }
+  const slice = data.subarray(offset, offset + length);
+  try {
+    const decoder = util.TextDecoder.create('utf-8', { ignoreBOM: true });
+    return decoder.decodeWithStream(slice, { stream: false });
+  } catch (_err) {
+    let s = '';
+    for (let i = 0; i < length; i++) {
+      s += String.fromCharCode(data[offset + i]);
+    }
+    return s;
+  }
 }
 
 export function parseAdvertData(data: ArrayBuffer): ParsedAdvert {
@@ -52,25 +84,40 @@ export function parseAdvertData(data: ArrayBuffer): ParsedAdvert {
     if (length === 0) {
       break;
     }
+    if (pos >= adv.length) {
+      break;
+    }
     const type = adv[pos++];
     const payloadLen = length - 1;
-    if (pos + payloadLen > adv.length) {
+    if (payloadLen < 0 || pos + payloadLen > adv.length) {
       break;
     }
     switch (type) {
       case AD_TYPE_FLAGS:
-        result.flags = adv[pos];
+        if (payloadLen >= 1) {
+          result.flags = adv[pos];
+        }
         break;
       case AD_TYPE_LOCAL_NAME_SHORT:
       case AD_TYPE_LOCAL_NAME_COMPLETE:
         result.localName = decodeUtf8Name(adv, pos, payloadLen);
         break;
       case AD_TYPE_TX_POWER:
-        result.txPower = adv[pos];
+        if (payloadLen >= 1) {
+          result.txPower = readInt8(adv[pos]);
+        }
         break;
       case AD_TYPE_UUID16_INC:
       case AD_TYPE_UUID16_COMP:
         parseUuid16(adv, pos, payloadLen, result.serviceUuids);
+        break;
+      case AD_TYPE_UUID32_INC:
+      case AD_TYPE_UUID32_COMP:
+        parseUuid32(adv, pos, payloadLen, result.serviceUuids);
+        break;
+      case AD_TYPE_UUID128_INC:
+      case AD_TYPE_UUID128_COMP:
+        parseUuid128(adv, pos, payloadLen, result.serviceUuids);
         break;
       case AD_TYPE_MANUFACTURER:
         result.manufacturerHex = bytesToHex(adv.slice(pos, pos + payloadLen));

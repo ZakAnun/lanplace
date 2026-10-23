@@ -4,13 +4,14 @@ import { AppleTheme } from '../common/AppleTheme';
 import { PRIVACY_POLICY_URL } from '../common/Constants';
 import { PermissionHelper } from '../common/PermissionHelper';
 import { PrivacyConsentHelper } from '../common/PrivacyConsentHelper';
+import { BluetoothHelper } from '../common/BluetoothHelper';
 import { BleScanService } from '../service/BleScanService';
 import { ScannedDevice } from '../model/ScannedDevice';
 import { DeviceListItem } from '../components/DeviceListItem';
 import { PrivacyConsentDialog } from '../components/PrivacyConsentDialog';
+import { BleDiscoveryRadar } from '../components/BleDiscoveryRadar';
 
 enum UiPhase {
-  Intro,
   Idle,
   Scanning,
   Results
@@ -19,12 +20,11 @@ enum UiPhase {
 @Entry
 @Component
 struct Home {
-  @State phase: UiPhase = UiPhase.Intro;
-  @State introPulse: number = 0.6;
-  @State introScale: number = 0.85;
+  @State phase: UiPhase = UiPhase.Idle;
   @State devices: ScannedDevice[] = [];
   private context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
   private privacyDialogController: CustomDialogController | null = null;
+  private actionInFlight: boolean = false;
 
   aboutToAppear(): void {
     this.privacyDialogController = new CustomDialogController({
@@ -32,7 +32,11 @@ struct Home {
         onAgree: () => {
           this.privacyDialogController?.close();
           PrivacyConsentHelper.setPrivacyAccepted(this.context, true).then(() => {
-            this.beginScanFlow();
+            this.beginScanFlow().catch(() => {
+              promptAction.showToast({ message: '操作失败，请重试' });
+            });
+          }).catch(() => {
+            promptAction.showToast({ message: '无法保存隐私同意状态' });
           });
         },
         onDecline: () => {
@@ -46,38 +50,24 @@ struct Home {
       autoCancel: false,
       alignment: DialogAlignment.Center
     });
-    PrivacyConsentHelper.shouldSkipIntro(this.context).then((skip: boolean) => {
-      if (skip) {
-        this.phase = UiPhase.Idle;
-      } else {
-        this.runIntroAnimation();
+    PrivacyConsentHelper.isPrivacyAccepted(this.context).then((accepted) => {
+      if (!accepted) {
+        this.privacyDialogController?.open();
       }
+    }).catch(() => {
+      // ignore prefs read errors on first launch
     });
   }
 
   aboutToDisappear(): void {
-    BleScanService.stop();
+    BleScanService.stop({ emitUpdate: false, notifyComplete: false });
   }
 
-  private runIntroAnimation(): void {
-    animateTo({ duration: 600, curve: Curve.EaseOut }, () => {
-      this.introScale = 1;
-      this.introPulse = 1;
-    });
-    setTimeout(() => {
-      animateTo({ duration: 600, curve: Curve.EaseInOut }, () => {
-        this.introPulse = 0.3;
-      });
-      setTimeout(() => {
-        this.phase = UiPhase.Idle;
-      }, 600);
-    }, 700);
-  }
-
-  private skipIntro(): void {
-    PrivacyConsentHelper.setSkipIntro(this.context).then(() => {
-      this.phase = UiPhase.Idle;
-    });
+  onPageHide(): void {
+    if (BleScanService.isScanning()) {
+      BleScanService.stop({ emitUpdate: true, notifyComplete: true });
+      this.phase = UiPhase.Results;
+    }
   }
 
   private openPrivacyPolicy(): void {
@@ -91,16 +81,46 @@ struct Home {
     });
   }
 
+  private scanErrorMessage(err: Error): string {
+    const raw = `${err.message ?? err}`;
+    if (raw.includes('2900003') || raw.includes('2900001')) {
+      return '请先开启系统蓝牙后再扫描';
+    }
+    if (raw.includes('201') || raw.includes('permission')) {
+      return '未授予蓝牙权限';
+    }
+    return '无法开始扫描，请检查蓝牙与权限';
+  }
+
   private async onPrimaryAction(): Promise<void> {
-    const accepted = await PrivacyConsentHelper.isPrivacyAccepted(this.context);
-    if (!accepted) {
-      this.privacyDialogController?.open();
+    if (this.actionInFlight || BleScanService.isScanning()) {
+      promptAction.showToast({ message: '正在扫描中' });
       return;
     }
-    await this.beginScanFlow();
+    try {
+      this.actionInFlight = true;
+      const accepted = await PrivacyConsentHelper.isPrivacyAccepted(this.context);
+      if (!accepted) {
+        this.privacyDialogController?.open();
+        return;
+      }
+      await this.beginScanFlow();
+    } catch (_err) {
+      promptAction.showToast({ message: '操作失败，请重试' });
+    } finally {
+      this.actionInFlight = false;
+    }
   }
 
   private async beginScanFlow(): Promise<void> {
+    if (BleScanService.isScanning()) {
+      promptAction.showToast({ message: '正在扫描中' });
+      return;
+    }
+    if (!BluetoothHelper.isEnabled()) {
+      promptAction.showToast({ message: '请先开启系统蓝牙' });
+      return;
+    }
     const hasBt = await PermissionHelper.hasBluetoothPermission(this.context);
     if (!hasBt) {
       const ok = await promptAction.showDialog({
@@ -116,80 +136,44 @@ struct Home {
       }
       const granted = await PermissionHelper.requestBluetoothPermission(this.context);
       if (!granted) {
-        promptAction.showToast({ message: '未授予蓝牙权限' });
+        promptAction.showToast({ message: '未授予蓝牙权限，可在系统设置中开启' });
         return;
       }
     }
     this.phase = UiPhase.Scanning;
     this.devices = [];
     try {
-      BleScanService.start((list: ScannedDevice[]) => {
-        this.devices = list;
-        if (list.length > 0) {
+      const started = BleScanService.start(
+        (list: ScannedDevice[]) => {
+          this.devices = list;
+        },
+        () => {
           this.phase = UiPhase.Results;
         }
-      });
+      );
+      if (!started) {
+        promptAction.showToast({ message: '正在扫描中' });
+        this.phase = UiPhase.Idle;
+      }
     } catch (e) {
-      promptAction.showToast({ message: `${e}` });
+      promptAction.showToast({ message: this.scanErrorMessage(e as Error) });
       this.phase = UiPhase.Idle;
-      return;
     }
-    setTimeout(() => {
-      if (BleScanService.isScanning()) {
-        BleScanService.stop();
-      }
-      if (this.devices.length > 0) {
-        this.phase = UiPhase.Results;
-      } else if (this.phase === UiPhase.Scanning) {
-        this.phase = UiPhase.Results;
-      }
-    }, 30100);
   }
 
   private stopScan(): void {
-    BleScanService.stop();
+    BleScanService.stop({ emitUpdate: true, notifyComplete: true });
     this.phase = UiPhase.Results;
   }
 
-  @Builder
-  introView() {
-    Stack() {
-      Column()
-        .width('100%')
-        .height('100%')
-        .backgroundColor(AppleTheme.PARCHMENT)
-      Column({ space: 24 }) {
-        Circle()
-          .width(120)
-          .height(120)
-          .fill(AppleTheme.PRIMARY)
-          .opacity(this.introPulse)
-          .scale({ x: this.introScale, y: this.introScale })
-        Circle()
-          .width(180)
-          .height(180)
-          .fill(Color.Transparent)
-          .border({ width: 2, color: AppleTheme.PRIMARY })
-          .opacity(this.introPulse * 0.5)
-          .scale({ x: this.introScale, y: this.introScale })
-      }
-      .justifyContent(FlexAlign.Center)
-      .width('100%')
-      .height('100%')
-      Button($r('app.string.btn_skip_intro'))
-        .fontSize(AppleTheme.FONT_CAPTION)
-        .fontColor(AppleTheme.PRIMARY)
-        .backgroundColor(Color.Transparent)
-        .position({ x: '80%', y: 48 })
-        .onClick(() => this.skipIntro())
-    }
-    .width('100%')
-    .height('100%')
+  private deviceListKey(item: ScannedDevice): string {
+    return `${item.deviceId}_${item.rssi}_${item.displayName}_${item.advertSummary}`;
   }
 
   @Builder
   idleView() {
-    Column({ space: 24 }) {
+    Column({ space: 20 }) {
+      BleDiscoveryRadar({ active: true })
       Text($r('app.string.home_title'))
         .fontSize(AppleTheme.FONT_TITLE)
         .fontWeight(FontWeight.Medium)
@@ -199,6 +183,7 @@ struct Home {
         .fontSize(AppleTheme.FONT_BODY)
         .fontColor(AppleTheme.INK_MUTED)
         .lineHeight(25)
+        .textAlign(TextAlign.Center)
       Button($r('app.string.btn_view_devices'))
         .fontSize(AppleTheme.FONT_BODY)
         .fontColor(AppleTheme.CANVAS)
@@ -213,15 +198,18 @@ struct Home {
         .fontColor(AppleTheme.PRIMARY)
         .onClick(() => this.openPrivacyPolicy())
     }
-    .padding({ left: 32, right: 32, top: 80, bottom: 48 })
+    .padding({ left: 24, right: 24, top: 48, bottom: 48 })
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
     .backgroundColor(AppleTheme.PARCHMENT)
   }
 
   @Builder
   scanningView() {
     Column({ space: 16 }) {
+      BleDiscoveryRadar({ active: true })
       Row({ space: 12 }) {
         LoadingProgress()
           .width(28)
@@ -242,7 +230,9 @@ struct Home {
     }
     .padding(24)
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
+    .height('100%')
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor(AppleTheme.PARCHMENT)
   }
 
   @Builder
@@ -251,14 +241,15 @@ struct Home {
       Text($r('app.string.empty_list'))
         .fontSize(AppleTheme.FONT_CAPTION)
         .fontColor(AppleTheme.INK_MUTED)
-        .margin({ top: 24 })
+        .margin({ top: 8 })
+        .width('100%')
     } else {
       List({ space: 12 }) {
         ForEach(this.devices, (item: ScannedDevice) => {
           ListItem() {
             DeviceListItem({ device: item })
           }
-        }, (item: ScannedDevice) => item.deviceId)
+        }, (item: ScannedDevice) => this.deviceListKey(item))
       }
       .width('100%')
       .layoutWeight(1)
@@ -278,20 +269,20 @@ struct Home {
         .fontColor(AppleTheme.CANVAS)
         .backgroundColor(AppleTheme.PRIMARY)
         .borderRadius(AppleTheme.RADIUS_PILL)
-        .onClick(() => this.onPrimaryAction())
+        .onClick(() => {
+          this.onPrimaryAction();
+        })
     }
     .padding(24)
     .width('100%')
     .height('100%')
-    .alignItems(HorizontalAlign.Start)
+    .alignItems(HorizontalAlign.Center)
     .backgroundColor(AppleTheme.CANVAS)
   }
 
   build() {
     Column() {
-      if (this.phase === UiPhase.Intro) {
-        this.introView()
-      } else if (this.phase === UiPhase.Idle) {
+      if (this.phase === UiPhase.Idle) {
         this.idleView()
       } else if (this.phase === UiPhase.Scanning) {
         this.scanningView()

@@ -20,16 +20,6 @@
           ],
           "when": "inuse"
         }
-      },
-      {
-        "name": "ohos.permission.INTERNET",
-        "reason": "$string:permission_internet_reason",
-        "usedScene": {
-          "abilities": [
-            "EntryAbility"
-          ],
-          "when": "inuse"
-        }
       }
     ],
     "abilities": [
@@ -39,8 +29,8 @@
         "description": "$string:EntryAbility_desc",
         "icon": "$media:layered_image",
         "label": "$string:EntryAbility_label",
-        "startWindowIcon": "$media:startIcon",
-        "startWindowBackground": "$color:start_window_background",
+        "startWindowIcon": "$media:foreground",
+        "startWindowBackground": "$color:primary",
         "exported": true,
         "skills": [
           {

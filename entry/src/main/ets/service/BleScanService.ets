@@ -5,6 +5,12 @@ import { ScannedDevice } from '../model/ScannedDevice';
 import { SCAN_TIMEOUT_MS } from '../common/Constants';
 
 type ScanCallback = (devices: ScannedDevice[]) => void;
+type ScanCompleteCallback = () => void;
+
+export interface BleScanStopOptions {
+  emitUpdate?: boolean;
+  notifyComplete?: boolean;
+}
 
 export class BleScanService {
   private static scanning: boolean = false;
@@ -12,11 +18,20 @@ export class BleScanService {
   private static timerId: number = -1;
   private static throttleId: number = -1;
   private static onUpdate: ScanCallback = () => {};
+  private static onComplete: ScanCompleteCallback = () => {};
 
   private static emitUpdate(): void {
     const list = Array.from(BleScanService.deviceMap.values());
     list.sort((a, b) => b.rssi - a.rssi);
     BleScanService.onUpdate(list);
+  }
+
+  private static detachListener(): void {
+    try {
+      ble.off('BLEDeviceFind', BleScanService.onDeviceFind);
+    } catch (_err) {
+      // ignore
+    }
   }
 
   private static onDeviceFind = (results: Array<ble.ScanResult>): void => {
@@ -43,11 +58,12 @@ export class BleScanService {
     return BleScanService.scanning;
   }
 
-  static start(onUpdate: ScanCallback): void {
+  static start(onUpdate: ScanCallback, onComplete?: ScanCompleteCallback): boolean {
     if (BleScanService.scanning) {
-      return;
+      return false;
     }
     BleScanService.onUpdate = onUpdate;
+    BleScanService.onComplete = onComplete ?? (() => {});
     BleScanService.deviceMap.clear();
     BleScanService.scanning = true;
     try {
@@ -56,22 +72,28 @@ export class BleScanService {
         interval: 0,
         dutyMode: ble.ScanDuty.SCAN_MODE_LOW_LATENCY
       };
-      ble.startBLEScan([], options);
+      ble.startBLEScan(null, options);
       BleScanService.timerId = setTimeout(() => {
-        BleScanService.stop();
-        BleScanService.emitUpdate();
+        BleScanService.stop({ emitUpdate: true, notifyComplete: true });
       }, SCAN_TIMEOUT_MS) as number;
+      return true;
     } catch (err) {
+      BleScanService.detachListener();
       BleScanService.scanning = false;
+      BleScanService.onUpdate = () => {};
+      BleScanService.onComplete = () => {};
       const e = err as BusinessError;
       throw new Error(`BLE scan failed: ${e.code} ${e.message}`);
     }
   }
 
-  static stop(): void {
+  static stop(options?: BleScanStopOptions): void {
     if (!BleScanService.scanning) {
       return;
     }
+    const emitUpdate = options?.emitUpdate !== false;
+    const notifyComplete = options?.notifyComplete !== false;
+
     BleScanService.scanning = false;
     if (BleScanService.timerId >= 0) {
       clearTimeout(BleScanService.timerId);
@@ -82,11 +104,24 @@ export class BleScanService {
       BleScanService.throttleId = -1;
     }
     try {
-      ble.off('BLEDeviceFind', BleScanService.onDeviceFind);
       ble.stopBLEScan();
     } catch (_err) {
-      // ignore stop errors
+      // ignore
     }
-    BleScanService.emitUpdate();
+    BleScanService.detachListener();
+
+    const updateCb = BleScanService.onUpdate;
+    const completeCb = BleScanService.onComplete;
+    BleScanService.onUpdate = () => {};
+    BleScanService.onComplete = () => {};
+
+    if (emitUpdate) {
+      const list = Array.from(BleScanService.deviceMap.values());
+      list.sort((a, b) => b.rssi - a.rssi);
+      updateCb(list);
+    }
+    if (notifyComplete) {
+      completeCb();
+    }
   }
 }
