@@ -10,7 +10,35 @@
     },
     {
       "name": "EntryAbility_label",
-      "value": "蓝所记"
+      "value": "蓝域"
+    },
+    {
+      "name": "permission_bluetooth_reason",
+      "value": "用于扫描并展示周围蓝牙设备"
+    },
+    {
+      "name": "home_title",
+      "value": "周围蓝牙设备"
+    },
+    {
+      "name": "home_subtitle",
+      "value": "点击下方按钮开始扫描周围蓝牙设备，数据仅在本机展示"
+    },
+    {
+      "name": "btn_view_devices",
+      "value": "查看周围蓝牙设备"
+    },
+    {
+      "name": "btn_stop_scan",
+      "value": "停止扫描"
+    },
+    {
+      "name": "scanning_hint",
+      "value": "正在扫描…"
+    },
+    {
+      "name": "empty_list",
+      "value": "暂未发现设备，请稍候或移近目标设备"
     }
   ]
 }

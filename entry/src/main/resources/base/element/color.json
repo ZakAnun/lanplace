@@ -3,6 +3,26 @@
     {
       "name": "start_window_background",
       "value": "#FFFFFF"
+    },
+    {
+      "name": "primary",
+      "value": "#0066CC"
+    },
+    {
+      "name": "canvas",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "parchment",
+      "value": "#F5F5F7"
+    },
+    {
+      "name": "ink",
+      "value": "#1D1D1F"
+    },
+    {
+      "name": "hairline",
+      "value": "#E0E0E0"
     }
   ]
 }
