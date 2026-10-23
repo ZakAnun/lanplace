@@ -2,7 +2,11 @@
   "string": [
     {
       "name": "app_name",
-      "value": "蓝所记"
+      "value": "蓝域"
+    },
+    {
+      "name": "app_name_en",
+      "value": "BlueScopes"
     }
   ]
 }
