@@ -1,11 +1,18 @@
 ---
-description: Superpowers 生成的 docs 不纳入版本库
+description: 本地 docs 与 Git 边界
 alwaysApply: true
 ---
 
-# Superpowers 文档与 Git
+# 文档与 Git
 
-- `docs/superpowers/` 由 Superpowers 工作流本地生成（计划、设计规格等），**不得提交到 Git**。
-- 已在 `.gitignore` 中忽略；新建或更新 Superpowers 文档时只保留在本地。
-- 可提交的上架合规页面放在 `docs/legal/`（如隐私政策 HTML）。
-- 实施计划若需团队共享，应复制到 `docs/legal/` 或 README 等非忽略路径，而不是依赖 `docs/superpowers/`。
+**可提交（合规 / 上架）：**
+
+- `docs/legal/` — 隐私政策 HTML、合规相关 Markdown 等
+
+**仅本地（不得提交）：**
+
+- `docs/design/` — 产品规格、UI 映射、实施计划、DESIGN 参考等
+- `docs/superpowers/` — Superpowers 工作流生成的计划与设计
+- `.superpowers/` — SDD 进度等本地状态
+
+以上路径已在 `.gitignore` 中忽略。更新本地设计文档时不要 `git add` 这些目录。
