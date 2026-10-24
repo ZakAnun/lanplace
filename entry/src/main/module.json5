@@ -32,6 +32,7 @@
         "startWindowIcon": "$media:start_window_icon",
         "startWindowBackground": "$color:primary",
         "exported": true,
+        "orientation": "auto_rotation_restricted",
         "skills": [
           {
             "entities": [

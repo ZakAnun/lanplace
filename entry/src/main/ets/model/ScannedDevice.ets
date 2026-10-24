@@ -1,3 +1,8 @@
+export enum DeviceLinkState {
+  Discovered = 0,
+  Available = 1
+}
+
 export interface ScannedDevice {
   deviceId: string;
   displayName: string;
@@ -5,4 +10,5 @@ export interface ScannedDevice {
   connectable: boolean;
   detailLine: string;
   advertSummary: string;
+  linkState: DeviceLinkState;
 }

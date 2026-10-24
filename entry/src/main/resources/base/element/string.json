@@ -21,12 +21,12 @@
       "value": "周围蓝牙设备"
     },
     {
-      "name": "home_subtitle",
-      "value": "点击下方按钮开始扫描周围蓝牙设备，数据仅在本机展示"
+      "name": "home_idle_caption",
+      "value": "扫描周围蓝牙设备"
     },
     {
-      "name": "btn_view_devices",
-      "value": "查看周围蓝牙设备"
+      "name": "btn_start_scan",
+      "value": "开始扫描"
     },
     {
       "name": "btn_stop_scan",
@@ -34,11 +34,43 @@
     },
     {
       "name": "scanning_hint",
-      "value": "正在扫描…"
+      "value": "正在搜索周围设备…"
+    },
+    {
+      "name": "browse_device_count",
+      "value": "周围 %1$d 台设备"
     },
     {
       "name": "empty_list",
       "value": "暂未发现设备，请稍候或移近目标设备"
+    },
+    {
+      "name": "radar_tap_hint",
+      "value": "点击光点查看设备信息"
+    },
+    {
+      "name": "label_privacy",
+      "value": "隐私"
+    },
+    {
+      "name": "toast_mock_demo",
+      "value": "演示模式：模拟周围设备"
+    },
+    {
+      "name": "a11y_stop_scan",
+      "value": "停止扫描"
+    },
+    {
+      "name": "a11y_rescan",
+      "value": "再次扫描"
+    },
+    {
+      "name": "a11y_start_scan",
+      "value": "开始扫描"
+    },
+    {
+      "name": "a11y_privacy",
+      "value": "隐私政策"
     }
   ]
 }

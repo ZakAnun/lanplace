@@ -3,14 +3,16 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { mergeScanResult } from '../common/BleAdvertParser';
 import { ScannedDevice } from '../model/ScannedDevice';
 import { SCAN_TIMEOUT_MS } from '../common/Constants';
+import {
+  BleScanStopOptions,
+  BLE_SCAN_STOP_QUIET,
+  BLE_SCAN_STOP_WITH_COMPLETE
+} from './BleScanStopOptions';
+
+export { BleScanStopOptions, BLE_SCAN_STOP_QUIET, BLE_SCAN_STOP_WITH_COMPLETE };
 
 type ScanCallback = (devices: ScannedDevice[]) => void;
 type ScanCompleteCallback = () => void;
-
-export interface BleScanStopOptions {
-  emitUpdate?: boolean;
-  notifyComplete?: boolean;
-}
 
 export class BleScanService {
   private static scanning: boolean = false;

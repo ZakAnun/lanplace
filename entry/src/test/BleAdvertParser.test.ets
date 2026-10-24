@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@ohos/hypium';
 import { mergeScanResult, parseAdvertData } from '../main/ets/common/BleAdvertParser';
+import { DeviceLinkState } from '../main/ets/model/ScannedDevice';
 
 export default function bleAdvertParserTest() {
   describe('BleAdvertParser', () => {
@@ -41,6 +42,7 @@ export default function bleAdvertParserTest() {
       const merged = mergeScanResult('id-1', '', -55, true, new Uint8Array(ad).buffer);
       expect(merged.displayName).assertEqual('AdvName');
       expect(merged.rssi).assertEqual(-55);
+      expect(merged.linkState).assertEqual(DeviceLinkState.Available);
     });
   });
 }

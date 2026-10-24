@@ -1,5 +1,5 @@
 import { util } from '@kit.ArkTS';
-import { ScannedDevice } from '../model/ScannedDevice';
+import { DeviceLinkState, ScannedDevice } from '../model/ScannedDevice';
 
 const AD_TYPE_FLAGS = 0x01;
 const AD_TYPE_UUID16_INC = 0x02;
@@ -168,6 +168,7 @@ export function mergeScanResult(
     rssi,
     connectable,
     detailLine,
-    advertSummary: parts.join(' · ')
+    advertSummary: parts.join(' · '),
+    linkState: connectable ? DeviceLinkState.Available : DeviceLinkState.Discovered
   };
 }
