@@ -182,6 +182,11 @@ export class MdnsScanService {
     for (let i = 0; i < LAN_SERVICE_TYPES.length; i++) {
       MdnsScanService.attachDiscovery(context, LAN_SERVICE_TYPES[i]);
     }
+    if (MdnsScanService.discoveries.length === 0) {
+      MdnsScanService.scanning = false;
+      MdnsScanService.onUpdate = () => {};
+      return false;
+    }
     return true;
   }
 

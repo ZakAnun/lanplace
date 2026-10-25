@@ -3,6 +3,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { AppleTheme } from '../common/AppleTheme';
 import { WindowLayoutStore } from '../common/WindowLayoutStore';
+import { HomeInventoryCoordinator } from '../service/HomeInventoryCoordinator';
 
 const DOMAIN = 0x0000;
 const WINDOW_BG: string = '#FFF5F5F7';
@@ -95,6 +96,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onBackground(): void {
+    HomeInventoryCoordinator.stopForBackground();
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onBackground');
   }
 }

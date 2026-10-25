@@ -189,6 +189,12 @@ export struct HomeInventoryPanel {
   radarStage() {
     Column({ space: 8 }) {
       this.wifiBanner()
+      Text($r('app.string.inventory_scope_hint'))
+        .fontSize(AppleTheme.FONT_CAPTION)
+        .fontColor(AppleTheme.INK_MUTED)
+        .textAlign(TextAlign.Center)
+        .maxLines(2)
+        .width('100%')
       this.hintText()
       this.legendRow()
       Column() {

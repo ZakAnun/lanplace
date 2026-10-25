@@ -20,7 +20,7 @@ enum InventoryUiPhase {
 @Entry
 @Component
 struct HomeInventory {
-  @State phase: InventoryUiPhase = InventoryUiPhase.Scanning;
+  @State phase: InventoryUiPhase = InventoryUiPhase.Results;
   @State devices: HomeInventoryDevice[] = [];
   @State radarActive: boolean = true;
   @State wifiSsid: string = '';
@@ -44,8 +44,8 @@ struct HomeInventory {
     this.pageAlive = true;
     this.radarActive = true;
     this.syncPageOrientation(this.pageAreaWidth, this.pageAreaHeight);
-    this.refreshWifiSsid();
     this.startInventoryScan().catch(() => {
+      this.phase = InventoryUiPhase.Results;
       this.prompt().showToast({ message: $r('app.string.toast_action_failed') });
     });
   }
@@ -72,6 +72,43 @@ struct HomeInventory {
     this.wifiSsid = await WifiNetworkHelper.linkedSsid();
   }
 
+  private async ensureBluetoothPermission(context: common.UIAbilityContext): Promise<boolean> {
+    if (await PermissionHelper.hasBluetoothPermission(context)) {
+      return true;
+    }
+    const preface = await this.prompt().showDialog({
+      title: $r('app.string.dialog_bluetooth_title'),
+      message: $r('app.string.dialog_bluetooth_message'),
+      buttons: [
+        { text: $r('app.string.dialog_btn_cancel'), color: AppleTheme.INK_MUTED },
+        { text: $r('app.string.dialog_btn_continue'), color: AppleTheme.PRIMARY }
+      ]
+    });
+    if (preface.index !== 1) {
+      return false;
+    }
+    let granted = await PermissionHelper.requestBluetoothPermission(context);
+    if (granted) {
+      return true;
+    }
+    const goSetting = await this.prompt().showDialog({
+      title: $r('app.string.dialog_bluetooth_denied_title'),
+      message: $r('app.string.dialog_bluetooth_denied_message'),
+      buttons: [
+        { text: $r('app.string.dialog_btn_cancel'), color: AppleTheme.INK_MUTED },
+        { text: $r('app.string.dialog_btn_go_settings'), color: AppleTheme.PRIMARY }
+      ]
+    });
+    if (goSetting.index !== 1) {
+      return false;
+    }
+    granted = await PermissionHelper.requestBluetoothPermissionFromSetting(context);
+    if (!granted) {
+      this.prompt().showToast({ message: $r('app.string.toast_bluetooth_permission_denied') });
+    }
+    return granted;
+  }
+
   private async startInventoryScan(): Promise<void> {
     if (this.actionInFlight || HomeInventoryCoordinator.isScanning()) {
       return;
@@ -90,36 +127,46 @@ struct HomeInventory {
       }
 
       const useMockBle = BleScanCoordinator.useMockScan();
-      if (!useMockBle && !BluetoothHelper.isEnabled()) {
-        this.prompt().showToast({ message: $r('app.string.toast_bluetooth_off') });
-      }
+      let enableBleScan = useMockBle;
+      let enableLanScan = useMockBle;
 
       if (!useMockBle) {
-        const hasBt = await PermissionHelper.hasBluetoothPermission(context);
-        if (!this.pageAlive) {
-          return;
-        }
-        if (!hasBt) {
-          const granted = await PermissionHelper.requestBluetoothPermission(context);
+        if (!BluetoothHelper.isEnabled()) {
+          this.prompt().showToast({ message: $r('app.string.toast_bluetooth_off') });
+        } else {
+          const btGranted = await this.ensureBluetoothPermission(context);
           if (!this.pageAlive) {
             return;
           }
-          if (!granted) {
-            this.prompt().showToast({ message: $r('app.string.toast_bluetooth_permission') });
-          }
+          enableBleScan = btGranted;
+        }
+
+        await this.refreshWifiSsid();
+        if (!this.pageAlive) {
+          return;
+        }
+        enableLanScan = WifiNetworkHelper.isWifiLinked();
+        if (!enableLanScan) {
+          this.prompt().showToast({ message: $r('app.string.toast_wifi_only_ble') });
+        }
+      } else {
+        await this.refreshWifiSsid();
+        if (!this.pageAlive) {
+          return;
         }
       }
 
-      await this.refreshWifiSsid();
+      if (!enableBleScan && !enableLanScan) {
+        this.phase = InventoryUiPhase.Results;
+        return;
+      }
+
       if (!this.pageAlive) {
         return;
       }
-      if (this.wifiSsid.length === 0 && !useMockBle) {
-        this.prompt().showToast({ message: $r('app.string.toast_wifi_only_ble') });
-      }
 
-      this.phase = InventoryUiPhase.Scanning;
       this.devices = [];
+      this.phase = InventoryUiPhase.Scanning;
 
       if (useMockBle) {
         this.prompt().showToast({ message: $r('app.string.toast_mock_demo') });
@@ -138,12 +185,17 @@ struct HomeInventory {
             return;
           }
           this.phase = InventoryUiPhase.Results;
-        }
+        },
+        enableBleScan,
+        enableLanScan
       );
       if (!started) {
-        this.prompt().showToast({ message: $r('app.string.toast_scan_in_progress') });
+        this.prompt().showToast({ message: $r('app.string.toast_scan_start_failed') });
         this.phase = InventoryUiPhase.Results;
       }
+    } catch (_err) {
+      this.phase = InventoryUiPhase.Results;
+      this.prompt().showToast({ message: $r('app.string.toast_action_failed') });
     } finally {
       this.actionInFlight = false;
     }

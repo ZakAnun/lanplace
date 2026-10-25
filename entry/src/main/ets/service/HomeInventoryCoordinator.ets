@@ -63,7 +63,8 @@ export class HomeInventoryCoordinator {
   }
 
   static start(context: common.Context, onUpdate: InventoryUpdateCallback,
-    onComplete?: InventoryCompleteCallback): boolean {
+    onComplete?: InventoryCompleteCallback, enableBleScan: boolean = true,
+    enableLanScan: boolean = true): boolean {
     if (HomeInventoryCoordinator.running) {
       return false;
     }
@@ -72,24 +73,29 @@ export class HomeInventoryCoordinator {
     HomeInventoryCoordinator.bleDevices = [];
     HomeInventoryCoordinator.lanDevices = [];
 
-    const mdnsStarted = MdnsScanService.start(context, (list: LanDiscoveredDevice[]) => {
-      HomeInventoryCoordinator.lanDevices = list.slice();
-      HomeInventoryCoordinator.emitUpdate();
-    });
+    let mdnsStarted = false;
+    if (enableLanScan) {
+      mdnsStarted = MdnsScanService.start(context, (list: LanDiscoveredDevice[]) => {
+        HomeInventoryCoordinator.lanDevices = list.slice();
+        HomeInventoryCoordinator.emitUpdate();
+      });
+    }
 
     let bleStarted = false;
-    try {
-      bleStarted = BleScanCoordinator.start(
-        (list: ScannedDevice[]) => {
-          HomeInventoryCoordinator.bleDevices = list.slice();
-          HomeInventoryCoordinator.emitUpdate();
-        },
-        () => {
-          // BLE 自然结束时不单独结束整次家庭扫描
-        }
-      );
-    } catch (_err) {
-      bleStarted = false;
+    if (enableBleScan) {
+      try {
+        bleStarted = BleScanCoordinator.start(
+          (list: ScannedDevice[]) => {
+            HomeInventoryCoordinator.bleDevices = list.slice();
+            HomeInventoryCoordinator.emitUpdate();
+          },
+          () => {
+            // BLE 自然结束时不单独结束整次扫描
+          }
+        );
+      } catch (_err) {
+        bleStarted = false;
+      }
     }
 
     if (!mdnsStarted && !bleStarted) {

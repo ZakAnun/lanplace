@@ -207,7 +207,7 @@ struct Home {
   @Builder
   idleLandscapeIconRail() {
     Column({ space: 14 }) {
-      Text('家')
+      Text('近')
         .fontSize(12)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppleTheme.INK_MUTED)

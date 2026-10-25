@@ -353,7 +353,7 @@ export struct InventoryDiscoveryRadar {
         .height(this.hubLayoutDiameter())
         .fill(AppleTheme.INK)
       Column() {
-        Text('家')
+        Text('近')
           .fontSize(this.hubLayoutFontSize())
           .fontWeight(FontWeight.Bold)
           .fontColor(AppleTheme.CANVAS)
