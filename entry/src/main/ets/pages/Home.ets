@@ -1,16 +1,10 @@
 import { common, Want } from '@kit.AbilityKit';
-import { PromptAction } from '@kit.ArkUI';
+import { PromptAction, router } from '@kit.ArkUI';
 import { AppleTheme } from '../common/AppleTheme';
 import { PRIVACY_POLICY_URL } from '../common/Constants';
-import { PermissionHelper } from '../common/PermissionHelper';
 import { PrivacyConsentHelper } from '../common/PrivacyConsentHelper';
-import { BluetoothHelper } from '../common/BluetoothHelper';
-import { BleScanCoordinator } from '../service/BleScanCoordinator';
-import { BLE_SCAN_STOP_QUIET, BLE_SCAN_STOP_WITH_COMPLETE } from '../service/BleScanService';
-import { ScannedDevice } from '../model/ScannedDevice';
-import { NearbyDevicePanel } from '../components/NearbyDevicePanel';
-import { PrivacyConsentDialog } from '../components/PrivacyConsentDialog';
 import { BleDiscoveryRadar } from '../components/BleDiscoveryRadar';
+import { PrivacyConsentDialog } from '../components/PrivacyConsentDialog';
 import {
   computeRadarCanvasSize,
   isLandscapeLayout,
@@ -19,17 +13,9 @@ import {
 } from '../common/RadarLayoutHelper';
 import { WindowLayoutStore } from '../common/WindowLayoutStore';
 
-enum UiPhase {
-  Idle,
-  Scanning,
-  Results
-}
-
 @Entry
 @Component
 struct Home {
-  @State phase: UiPhase = UiPhase.Idle;
-  @State devices: ScannedDevice[] = [];
   @State radarActive: boolean = true;
   @State idleRadarSelectionId: string = '';
   @State idleRadarCanvasSize: number = 280;
@@ -49,10 +35,6 @@ struct Home {
     return this.getUIContext().getPromptAction();
   }
 
-  private showToast(message: string): void {
-    this.prompt().showToast({ message });
-  }
-
   aboutToAppear(): void {
     const context = this.abilityContext();
     this.privacyDialogController = new CustomDialogController({
@@ -60,11 +42,9 @@ struct Home {
         onAgree: () => {
           this.privacyDialogController?.close();
           PrivacyConsentHelper.setPrivacyAccepted(context, true).then(() => {
-            this.beginScanFlow().catch(() => {
-              this.showToast('操作失败，请重试');
-            });
+            this.openHomeInventory();
           }).catch(() => {
-            this.showToast('无法保存隐私同意状态');
+            this.prompt().showToast({ message: $r('app.string.toast_privacy_save_failed') });
           });
         },
         onDecline: () => {
@@ -90,17 +70,6 @@ struct Home {
     this.refreshIdleRadarSize();
   }
 
-  aboutToDisappear(): void {
-    BleScanCoordinator.stop(BLE_SCAN_STOP_QUIET);
-  }
-
-  onPageHide(): void {
-    if (BleScanCoordinator.isScanning()) {
-      BleScanCoordinator.stop(BLE_SCAN_STOP_WITH_COMPLETE);
-      this.phase = UiPhase.Results;
-    }
-  }
-
   onPageShow(): void {
     this.radarActive = true;
     this.syncPageOrientation(this.pageAreaWidth, this.pageAreaHeight);
@@ -114,24 +83,12 @@ struct Home {
       uri: PRIVACY_POLICY_URL
     };
     this.abilityContext().startAbility(want).catch(() => {
-      this.showToast('无法打开隐私政策链接');
+      this.prompt().showToast({ message: $r('app.string.toast_open_policy_failed') });
     });
   }
 
-  private scanErrorMessage(err: Error): string {
-    const raw = `${err.message ?? err}`;
-    if (raw.includes('2900003') || raw.includes('2900001')) {
-      return '请先开启系统蓝牙后再扫描';
-    }
-    if (raw.includes('201') || raw.includes('permission')) {
-      return '未授予蓝牙权限';
-    }
-    return '无法开始扫描，请检查蓝牙与权限';
-  }
-
   private async onPrimaryAction(): Promise<void> {
-    if (this.actionInFlight || BleScanCoordinator.isScanning()) {
-      this.showToast('正在扫描中');
+    if (this.actionInFlight) {
       return;
     }
     try {
@@ -141,85 +98,12 @@ struct Home {
         this.privacyDialogController?.open();
         return;
       }
-      await this.beginScanFlow();
+      this.openHomeInventory();
     } catch (_err) {
-      this.showToast('操作失败，请重试');
+      this.prompt().showToast({ message: $r('app.string.toast_action_failed') });
     } finally {
       this.actionInFlight = false;
     }
-  }
-
-  private async beginScanFlow(): Promise<void> {
-    if (BleScanCoordinator.isScanning()) {
-      this.showToast('正在扫描中');
-      return;
-    }
-    const useMock = BleScanCoordinator.useMockScan();
-    if (!useMock && !BluetoothHelper.isEnabled()) {
-      this.showToast('请先开启系统蓝牙');
-      return;
-    }
-    const context = this.abilityContext();
-    const hasBt = useMock || await PermissionHelper.hasBluetoothPermission(context);
-    if (!hasBt) {
-      const ok = await this.prompt().showDialog({
-        title: '蓝牙权限',
-        message: '需要蓝牙权限以扫描周围设备，数据仅在本机展示。',
-        buttons: [
-          { text: '取消', color: AppleTheme.INK_MUTED },
-          { text: '继续', color: AppleTheme.PRIMARY }
-        ]
-      });
-      if (ok.index !== 1) {
-        return;
-      }
-      let granted = await PermissionHelper.requestBluetoothPermission(context);
-      if (!granted) {
-        const goSetting = await this.prompt().showDialog({
-          title: '需要蓝牙权限',
-          message: '扫描需要蓝牙权限。您可稍后再试，或前往系统设置开启。',
-          buttons: [
-            { text: '取消', color: AppleTheme.INK_MUTED },
-            { text: '去设置', color: AppleTheme.PRIMARY }
-          ]
-        });
-        if (goSetting.index !== 1) {
-          return;
-        }
-        granted = await PermissionHelper.requestBluetoothPermissionFromSetting(context);
-        if (!granted) {
-          this.showToast('仍未授予蓝牙权限');
-          return;
-        }
-      }
-    }
-    this.phase = UiPhase.Scanning;
-    this.devices = [];
-    try {
-      if (useMock) {
-        this.prompt().showToast({ message: $r('app.string.toast_mock_demo') });
-      }
-      const started = BleScanCoordinator.start(
-        (list: ScannedDevice[]) => {
-          this.devices = list.slice();
-        },
-        () => {
-          this.phase = UiPhase.Results;
-        }
-      );
-      if (!started) {
-        this.showToast('正在扫描中');
-        this.phase = UiPhase.Idle;
-      }
-    } catch (e) {
-      this.showToast(this.scanErrorMessage(e as Error));
-      this.phase = UiPhase.Idle;
-    }
-  }
-
-  private stopScan(): void {
-    BleScanCoordinator.stop(BLE_SCAN_STOP_WITH_COMPLETE);
-    this.phase = UiPhase.Results;
   }
 
   private refreshIdleRadarSize(): void {
@@ -264,6 +148,12 @@ struct Home {
     this.applyPageLandscape(width, height);
   }
 
+  private openHomeInventory(): void {
+    router.pushUrl({ url: 'pages/HomeInventory' }).catch(() => {
+      this.prompt().showToast({ message: $r('app.string.toast_open_inventory_failed') });
+    });
+  }
+
   @Builder
   idleRadarBlock() {
     Stack({ alignContent: Alignment.Center }) {
@@ -302,13 +192,13 @@ struct Home {
 
   @Builder
   idlePrimaryButton() {
-    Button($r('app.string.btn_start_scan'))
+    Button($r('app.string.btn_home_inventory'))
       .fontSize(AppleTheme.FONT_BODY)
       .fontColor(AppleTheme.CANVAS)
       .backgroundColor(AppleTheme.PRIMARY)
       .borderRadius(AppleTheme.RADIUS_PILL)
       .padding({ left: 22, right: 22, top: 11, bottom: 11 })
-      .accessibilityText($r('app.string.a11y_start_scan'))
+      .accessibilityText($r('app.string.a11y_home_inventory'))
       .onClick(() => {
         this.onPrimaryAction();
       })
@@ -317,7 +207,7 @@ struct Home {
   @Builder
   idleLandscapeIconRail() {
     Column({ space: 14 }) {
-      Text('BT')
+      Text('家')
         .fontSize(12)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppleTheme.INK_MUTED)
@@ -332,7 +222,7 @@ struct Home {
       .width(48)
       .height(48)
       .backgroundColor(AppleTheme.PRIMARY)
-      .accessibilityText($r('app.string.a11y_start_scan'))
+      .accessibilityText($r('app.string.a11y_home_inventory'))
       .onClick(() => {
         this.onPrimaryAction();
       })
@@ -431,118 +321,9 @@ struct Home {
     })
   }
 
-  @Builder
-  browseHeader() {
-    Text($r('app.string.home_title'))
-      .fontSize(24)
-      .fontWeight(FontWeight.Medium)
-      .fontColor(AppleTheme.INK)
-      .width('100%')
-      .textAlign(TextAlign.Center)
-      .padding({ bottom: 4 })
-  }
-
-  @Builder
-  scanStopButton() {
-    Button($r('app.string.btn_stop_scan'))
-      .fontSize(AppleTheme.FONT_BODY)
-      .fontColor(AppleTheme.PRIMARY)
-      .backgroundColor(AppleTheme.CANVAS)
-      .border({ width: 1, color: AppleTheme.PRIMARY })
-      .borderRadius(AppleTheme.RADIUS_PILL)
-      .accessibilityText($r('app.string.a11y_stop_scan'))
-      .onClick(() => this.stopScan())
-  }
-
-  @Builder
-  scanFooterIcon() {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      Text('■')
-        .fontSize(16)
-        .fontColor(AppleTheme.PRIMARY)
-        .fontWeight(FontWeight.Medium)
-    }
-    .width(48)
-    .height(48)
-    .backgroundColor(AppleTheme.CANVAS)
-    .border({ width: 1, color: AppleTheme.PRIMARY })
-    .accessibilityText($r('app.string.a11y_stop_scan'))
-    .onClick(() => {
-      this.stopScan();
-    })
-  }
-
-  @Builder
-  rescanFooterIcon() {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      Text('↻')
-        .fontSize(20)
-        .fontColor(AppleTheme.CANVAS)
-        .fontWeight(FontWeight.Medium)
-    }
-    .width(48)
-    .height(48)
-    .backgroundColor(AppleTheme.PRIMARY)
-    .accessibilityText($r('app.string.a11y_rescan'))
-    .onClick(() => {
-      this.onPrimaryAction();
-    })
-  }
-
-  @Builder
-  rescanButton() {
-    Button($r('app.string.btn_start_scan'))
-      .fontSize(AppleTheme.FONT_BODY)
-      .fontColor(AppleTheme.CANVAS)
-      .backgroundColor(AppleTheme.PRIMARY)
-      .borderRadius(AppleTheme.RADIUS_PILL)
-      .accessibilityText($r('app.string.a11y_rescan'))
-      .onClick(() => {
-        this.onPrimaryAction();
-      })
-  }
-
-  @Builder
-  deviceBrowseShell(scanning: boolean) {
-    Column({ space: 12 }) {
-      NearbyDevicePanel({
-        devices: this.devices,
-        active: this.radarActive,
-        scanning: scanning,
-        isLandscapeLayout: this.pageLandscape,
-        topBanner: this.browseHeader,
-        footerIconAction: scanning ? this.scanFooterIcon : this.rescanFooterIcon
-      })
-        .layoutWeight(1)
-        .width('100%')
-
-      if (!this.pageLandscape) {
-        if (scanning) {
-          this.scanStopButton()
-        } else {
-          this.rescanButton()
-        }
-      }
-    }
-    .padding(this.pageLandscape
-      ? { left: 16, right: 16, top: 12, bottom: 12 }
-      : { left: 24, right: 24, top: 16, bottom: 24 })
-    .width('100%')
-    .height('100%')
-    .alignItems(HorizontalAlign.Center)
-    .backgroundColor(AppleTheme.CANVAS)
-    .onAreaChange((_old, area) => {
-      this.syncPageAreaFromChange(area.width as number, area.height as number);
-    })
-  }
-
   build() {
     Column() {
-      if (this.phase === UiPhase.Idle) {
-        this.idleView()
-      } else {
-        this.deviceBrowseShell(this.phase === UiPhase.Scanning)
-      }
+      this.idleView()
     }
     .width('100%')
     .height('100%')

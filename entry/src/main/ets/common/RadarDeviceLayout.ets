@@ -20,6 +20,27 @@ export function deviceSpherePointForIndex(index: number, total: number): Vec3 {
   };
 }
 
+/** 按 deviceKey 哈希固定球面位置，列表增删时单点不跳动 */
+export function deviceSpherePointForKey(deviceKey: string): Vec3 {
+  let h1 = 2166136261;
+  let h2 = 16777619;
+  for (let i = 0; i < deviceKey.length; i++) {
+    const c = deviceKey.charCodeAt(i);
+    h1 = ((h1 ^ c) * 16777619) >>> 0;
+    h2 = ((h2 ^ c) * 2246822519) >>> 0;
+  }
+  const u = ((h1 >>> 0) % 10000) / 10000;
+  const v = ((h2 >>> 0) % 10000) / 10000;
+  const phi = Math.acos(1 - 2 * u);
+  const theta = 2 * Math.PI * v;
+  const r = 0.85;
+  return {
+    x: Math.sin(phi) * Math.cos(theta) * r,
+    y: Math.cos(phi) * r,
+    z: Math.sin(phi) * Math.sin(theta) * r
+  };
+}
+
 export function ripplePhaseOffset(deviceId: string): number {
   let hash = 0;
   for (let i = 0; i < deviceId.length; i++) {

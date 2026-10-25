@@ -22,7 +22,7 @@
     },
     {
       "name": "home_idle_caption",
-      "value": "扫描周围蓝牙设备"
+      "value": "发现家中蓝牙与局域网设备"
     },
     {
       "name": "btn_start_scan",
@@ -69,8 +69,124 @@
       "value": "开始扫描"
     },
     {
+      "name": "a11y_home_inventory",
+      "value": "打开家庭设备清单"
+    },
+    {
       "name": "a11y_privacy",
       "value": "隐私政策"
+    },
+    {
+      "name": "a11y_back",
+      "value": "返回"
+    },
+    {
+      "name": "btn_home_inventory",
+      "value": "家庭设备清单"
+    },
+    {
+      "name": "inventory_title",
+      "value": "家庭设备清单"
+    },
+    {
+      "name": "inventory_scanning_hint",
+      "value": "正在搜索蓝牙与局域网设备…"
+    },
+    {
+      "name": "inventory_device_count",
+      "value": "已发现 %1$d 台设备"
+    },
+    {
+      "name": "inventory_empty",
+      "value": "暂未发现设备，请确认已连接 Wi‑Fi 并靠近蓝牙设备"
+    },
+    {
+      "name": "inventory_wifi_ssid",
+      "value": "当前 Wi‑Fi：%1$s"
+    },
+    {
+      "name": "inventory_legend_ble",
+      "value": "蓝牙"
+    },
+    {
+      "name": "inventory_legend_lan",
+      "value": "局域网"
+    },
+    {
+      "name": "inventory_rssi_line",
+      "value": "信号强度 %1$d dBm"
+    },
+    {
+      "name": "permission_internet_reason",
+      "value": "用于在同 Wi‑Fi 下发现局域网设备"
+    },
+    {
+      "name": "permission_wifi_reason",
+      "value": "用于在清单页显示当前 Wi‑Fi 名称"
+    },
+    {
+      "name": "privacy_dialog_title",
+      "value": "隐私政策"
+    },
+    {
+      "name": "privacy_dialog_body",
+      "value": "蓝域（BlueScopes）会在您使用家庭设备清单时，在本机扫描并展示周围蓝牙设备，以及同一 Wi‑Fi 下通过 mDNS 主动宣告的局域网设备（如名称、IP、端口）；并读取当前 Wi‑Fi 名称以便展示。数据仅在本机显示、不上传。请阅读隐私政策后选择是否继续。"
+    },
+    {
+      "name": "privacy_dialog_open_policy",
+      "value": "查看隐私政策"
+    },
+    {
+      "name": "privacy_dialog_decline",
+      "value": "不同意"
+    },
+    {
+      "name": "privacy_dialog_agree",
+      "value": "同意并继续"
+    },
+    {
+      "name": "toast_privacy_save_failed",
+      "value": "无法保存隐私同意状态"
+    },
+    {
+      "name": "toast_open_policy_failed",
+      "value": "无法打开隐私政策链接"
+    },
+    {
+      "name": "toast_action_failed",
+      "value": "操作失败，请重试"
+    },
+    {
+      "name": "toast_open_inventory_failed",
+      "value": "无法打开家庭设备清单"
+    },
+    {
+      "name": "toast_privacy_required",
+      "value": "请先在首页同意隐私政策"
+    },
+    {
+      "name": "toast_bluetooth_off",
+      "value": "请先开启系统蓝牙"
+    },
+    {
+      "name": "toast_bluetooth_permission",
+      "value": "需要蓝牙权限以扫描周围设备"
+    },
+    {
+      "name": "toast_wifi_only_ble",
+      "value": "未连接 Wi‑Fi，将仅扫描蓝牙设备"
+    },
+    {
+      "name": "toast_scan_in_progress",
+      "value": "正在扫描中"
+    },
+    {
+      "name": "inventory_a11y_picker_show",
+      "value": "文字选择设备（无障碍）"
+    },
+    {
+      "name": "inventory_a11y_picker_hide",
+      "value": "收起文字选择"
     }
   ]
 }

@@ -9,22 +9,22 @@ export struct PrivacyConsentDialog {
 
   build() {
     Column({ space: 16 }) {
-      Text('隐私政策')
+      Text($r('app.string.privacy_dialog_title'))
         .fontSize(AppleTheme.FONT_TITLE)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppleTheme.INK)
-      Text('蓝域（BlueScopes）会在您主动扫描时展示周围蓝牙设备信息，数据仅在本机显示、不上传。请阅读隐私政策后选择是否继续。')
+      Text($r('app.string.privacy_dialog_body'))
         .fontSize(AppleTheme.FONT_BODY)
         .fontColor(AppleTheme.INK)
         .lineHeight(25)
-      Text('查看隐私政策')
+      Text($r('app.string.privacy_dialog_open_policy'))
         .fontSize(AppleTheme.FONT_BODY)
         .fontColor(AppleTheme.PRIMARY)
         .onClick(() => {
           this.onOpenPolicy();
         })
       Row({ space: 12 }) {
-        Button('不同意')
+        Button($r('app.string.privacy_dialog_decline'))
           .layoutWeight(1)
           .backgroundColor(AppleTheme.CANVAS)
           .fontColor(AppleTheme.PRIMARY)
@@ -33,7 +33,7 @@ export struct PrivacyConsentDialog {
           .onClick(() => {
             this.onDecline();
           })
-        Button('同意并继续')
+        Button($r('app.string.privacy_dialog_agree'))
           .layoutWeight(1)
           .backgroundColor(AppleTheme.PRIMARY)
           .fontColor(AppleTheme.CANVAS)
