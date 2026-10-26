@@ -221,12 +221,44 @@
       "value": "无法开始扫描，请检查蓝牙、Wi‑Fi 与权限"
     },
     {
-      "name": "inventory_a11y_picker_show",
-      "value": "文字选择设备（无障碍）"
+      "name": "inventory_picker_sheet_title",
+      "value": "选择设备"
     },
     {
-      "name": "inventory_a11y_picker_hide",
-      "value": "收起文字选择"
+      "name": "btn_close_sheet",
+      "value": "关闭"
+    },
+    {
+      "name": "inventory_picker_show",
+      "value": "从列表选择设备"
+    },
+    {
+      "name": "inventory_a11y_picker_show",
+      "value": "从列表选择设备，打开设备选择面板"
+    },
+    {
+      "name": "inventory_kind_lan",
+      "value": "LAN"
+    },
+    {
+      "name": "inventory_kind_ble",
+      "value": "BT"
+    },
+    {
+      "name": "inventory_hub_near",
+      "value": "近"
+    },
+    {
+      "name": "inventory_picker_empty",
+      "value": "暂无可用设备"
+    },
+    {
+      "name": "inventory_a11y_pick_lan",
+      "value": "%1$s，局域网"
+    },
+    {
+      "name": "inventory_a11y_pick_ble",
+      "value": "%1$s，蓝牙"
     }
   ]
 }

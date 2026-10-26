@@ -1,4 +1,5 @@
 import { AppleTheme } from '../common/AppleTheme';
+import { computeDevicePickerListMaxHeightVp } from '../common/DevicePickerSheetLayout';
 import {
   computeRadarCanvasSize,
   LANDSCAPE_RIGHT_RAIL_WIDTH,
@@ -7,19 +8,21 @@ import {
 import { HomeInventoryDevice, InventoryDeviceKind } from '../model/HomeInventoryDevice';
 import { HomeInventoryDeviceInfoBar } from './HomeInventoryDeviceInfoBar';
 import { InventoryDiscoveryRadar } from './InventoryDiscoveryRadar';
+import { InventoryDevicePickerSheet } from './InventoryDevicePickerSheet';
 
 @Component
 export struct HomeInventoryPanel {
   @Prop @Watch('onDevicesChanged') devices: HomeInventoryDevice[] = [];
   @Prop @Watch('onLayoutModeChanged') isLandscapeLayout: boolean = false;
   @Prop scanning: boolean = false;
-  @Prop active: boolean = true;
+  @Prop @Watch('onActiveChanged') active: boolean = true;
+  @Prop windowHeightVp: number = 0;
   @Prop wifiSsid: string = '';
   @State selectedDeviceKey: string = '';
   @State layoutWidth: number = 0;
   @State layoutHeight: number = 0;
   @State radarCanvasSize: number = 280;
-  @State showTextDevicePicker: boolean = false;
+  @State showDevicePickerSheet: boolean = false;
   @BuilderParam footerIconAction: () => void = this.emptySlot;
 
   @Builder
@@ -31,7 +34,21 @@ export struct HomeInventoryPanel {
   }
 
   onDevicesChanged(): void {
+    if (this.devices.length === 0) {
+      this.showDevicePickerSheet = false;
+    }
     this.syncSelection();
+  }
+
+  onActiveChanged(): void {
+    if (!this.active) {
+      this.showDevicePickerSheet = false;
+    }
+  }
+
+  private devicePickerListMaxHeight(): number {
+    const windowVp = this.windowHeightVp > 0 ? this.windowHeightVp : this.layoutHeight;
+    return computeDevicePickerListMaxHeightVp(windowVp);
   }
 
   aboutToAppear(): void {
@@ -123,7 +140,7 @@ export struct HomeInventoryPanel {
           .fontColor(AppleTheme.INK_MUTED)
       }
       Row({ space: 6 }) {
-        Circle().width(8).height(8).fill('#E68619')
+        Circle().width(8).height(8).fill(AppleTheme.LAN_ACCENT)
         Text($r('app.string.inventory_legend_lan'))
           .fontSize(AppleTheme.FONT_CAPTION)
           .fontColor(AppleTheme.INK_MUTED)
@@ -149,40 +166,58 @@ export struct HomeInventoryPanel {
   }
 
   @Builder
-  textDevicePicker() {
+  textDevicePickerEntry() {
     if (this.devices.length > 0) {
-      Column({ space: 8 }) {
-        Text(this.showTextDevicePicker
-          ? $r('app.string.inventory_a11y_picker_hide')
-          : $r('app.string.inventory_a11y_picker_show'))
-          .fontSize(AppleTheme.FONT_CAPTION)
-          .fontColor(AppleTheme.PRIMARY)
-          .textAlign(TextAlign.Center)
-          .width('100%')
-          .accessibilityText($r('app.string.inventory_a11y_picker_show'))
-          .onClick(() => {
-            this.showTextDevicePicker = !this.showTextDevicePicker;
-          })
-        if (this.showTextDevicePicker) {
-          Column({ space: 6 }) {
-            ForEach(this.devices, (item: HomeInventoryDevice) => {
-              Button(item.displayName)
-                .fontSize(AppleTheme.FONT_CAPTION)
-                .fontColor(this.selectedDeviceKey === item.deviceKey ? AppleTheme.CANVAS : AppleTheme.PRIMARY)
-                .backgroundColor(this.selectedDeviceKey === item.deviceKey ? AppleTheme.PRIMARY : AppleTheme.CANVAS)
-                .border({ width: 1, color: AppleTheme.PRIMARY })
-                .borderRadius(AppleTheme.RADIUS_PILL)
-                .width('100%')
-                .onClick(() => {
-                  this.selectedDeviceKey = item.deviceKey;
-                })
-            }, (item: HomeInventoryDevice) => item.deviceKey)
-          }
-          .width('100%')
-        }
-      }
-      .width('100%')
+      Button($r('app.string.inventory_picker_show'))
+        .type(ButtonType.Normal)
+        .fontSize(AppleTheme.FONT_CAPTION)
+        .fontColor(AppleTheme.PRIMARY)
+        .backgroundColor(Color.Transparent)
+        .borderRadius(AppleTheme.RADIUS_PILL)
+        .height(AppleTheme.TOUCH_TARGET_VP)
+        .width('100%')
+        .accessibilityText($r('app.string.inventory_a11y_picker_show'))
+        .onClick(() => {
+          this.showDevicePickerSheet = true;
+        })
     }
+  }
+
+  private closeDevicePickerSheet(): void {
+    this.showDevicePickerSheet = false;
+  }
+
+  private onDevicePickerSheetDisappear(): void {
+    this.closeDevicePickerSheet();
+  }
+
+  private devicePickerSheetOptions(): SheetOptions {
+    const options: SheetOptions = {
+      height: SheetSize.FIT_CONTENT,
+      dragBar: true,
+      showClose: false,
+      preferType: SheetType.BOTTOM,
+      maskColor: AppleTheme.SHEET_MASK,
+      onDisappear: (): void => {
+        this.onDevicePickerSheetDisappear();
+      }
+    };
+    return options;
+  }
+
+  @Builder
+  devicePickerSheetPanel() {
+    InventoryDevicePickerSheet({
+      devices: this.devices,
+      listMaxHeight: this.devicePickerListMaxHeight(),
+      selectedDeviceKey: $selectedDeviceKey,
+      onPick: (): void => {
+        this.closeDevicePickerSheet();
+      },
+      onClose: (): void => {
+        this.closeDevicePickerSheet();
+      }
+    })
   }
 
   @Builder
@@ -204,7 +239,7 @@ export struct HomeInventoryPanel {
       .width('100%')
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
-      this.textDevicePicker()
+      this.textDevicePickerEntry()
     }
     .width('100%')
     .alignItems(HorizontalAlign.Center)
@@ -276,5 +311,6 @@ export struct HomeInventoryPanel {
         this.refreshRadarSize();
       }
     })
+    .bindSheet(this.showDevicePickerSheet, this.devicePickerSheetPanel(), this.devicePickerSheetOptions())
   }
 }

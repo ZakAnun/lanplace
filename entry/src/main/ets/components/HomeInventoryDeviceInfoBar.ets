@@ -42,7 +42,7 @@ export struct HomeInventoryDeviceInfoBar {
             .layoutWeight(1)
           Text(this.kindLabel())
             .fontSize(AppleTheme.FONT_CAPTION)
-            .fontColor(this.device.kind === InventoryDeviceKind.Lan ? '#E68619' : AppleTheme.PRIMARY)
+            .fontColor(this.device.kind === InventoryDeviceKind.Lan ? AppleTheme.LAN_TEXT : AppleTheme.PRIMARY)
         }
         .width('100%')
         Text(this.device.detailLine)

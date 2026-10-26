@@ -40,6 +40,13 @@ struct HomeInventory {
     return this.getUIContext().getPromptAction();
   }
 
+  private mainWindowHeightVp(): number {
+    if (this.mainWindowHeight <= 0) {
+      return this.pageAreaHeight;
+    }
+    return this.getUIContext().px2vp(this.mainWindowHeight);
+  }
+
   aboutToAppear(): void {
     this.pageAlive = true;
     this.radarActive = true;
@@ -337,6 +344,7 @@ struct HomeInventory {
         active: this.radarActive,
         scanning: this.phase === InventoryUiPhase.Scanning,
         isLandscapeLayout: this.pageLandscape,
+        windowHeightVp: this.mainWindowHeightVp(),
         wifiSsid: this.wifiSsid,
         footerIconAction: this.phase === InventoryUiPhase.Scanning ? this.scanFooterIcon : this.rescanFooterIcon
       })
