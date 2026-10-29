@@ -6,7 +6,7 @@ import { WindowLayoutStore } from '../common/WindowLayoutStore';
 import { HomeInventoryCoordinator } from '../service/HomeInventoryCoordinator';
 
 const DOMAIN = 0x0000;
-const WINDOW_BG: string = '#FFF5F5F7';
+const WINDOW_BG: string = '#FF' + AppleTheme.CANVAS.slice(1);
 
 export default class EntryAbility extends UIAbility {
   private mainWindow: window.Window | null = null;

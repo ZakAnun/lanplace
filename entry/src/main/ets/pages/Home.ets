@@ -315,7 +315,7 @@ struct Home {
     .padding(this.pageLandscape
       ? { left: 16, right: 16, top: 12, bottom: 12 }
       : { left: 24, right: 24, top: 24, bottom: 24 })
-    .backgroundColor(AppleTheme.PARCHMENT)
+    .backgroundColor(AppleTheme.CANVAS)
     .onAreaChange((_old, area) => {
       this.syncPageAreaFromChange(area.width as number, area.height as number);
     })
@@ -329,6 +329,7 @@ struct Home {
     .height('100%')
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
+    .backgroundColor(AppleTheme.CANVAS)
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }
 }
