@@ -38,3 +38,25 @@ entry/src/main/ets/
 ## 构建
 
 使用 DevEco Studio 打开工程，连接设备或模拟器，执行 **Build HAP** / Run。签名与 `compatibleSdkVersion` 按本地环境配置。
+
+## Flutter Module（混合开发，可选）
+
+工程已预留 **Flutter module** 嵌入：`flutter_module/`、`har/`、`LanplaceFlutterEntry`、`pages/FlutterModuleHost`。
+
+1. 安装 **OpenHarmony 适配版 Flutter**（[flutter_flutter](https://gitee.com/openharmony-sig/flutter_flutter)），不要用仅支持 iOS/Android 的官方 stable 打 HAR。
+2. 执行：`chmod +x scripts/sync_flutter_har.sh && ./scripts/sync_flutter_har.sh`
+3. 工程根目录：`ohpm install`，DevEco **Sync** 后编译。
+4. 从 ArkTS 打开 Flutter 页：`router.pushUrl({ url: 'pages/FlutterModuleHost' })`（常量见 `FlutterModuleRoute.ets`）。
+
+未生成 `har/*.har` 前，entry 会因缺少 `@ohos/flutter_ohos` 依赖而无法编译；纯 ArkTS 开发可先不执行上述步骤。
+
+## Flutter Module（混合开发，可选）
+
+工程已预留 **Flutter module** 嵌入：`flutter_module/`、`har/`、`LanplaceFlutterEntry`、`pages/FlutterModuleHost`。
+
+1. 安装 **OpenHarmony 适配版 Flutter**（[flutter_flutter](https://gitee.com/openharmony-sig/flutter_flutter)），不要用仅支持 iOS/Android 的官方 stable 打 HAR。
+2. 执行：`chmod +x scripts/sync_flutter_har.sh && ./scripts/sync_flutter_har.sh`
+3. 工程根目录：`ohpm install`，DevEco **Sync** 后编译。
+4. 从 ArkTS 打开 Flutter 页：`router.pushUrl({ url: 'pages/FlutterModuleHost' })`（常量见 `FlutterModuleRoute.ets`）。
+
+未生成 `har/*.har` 前，entry 会因缺少 `@ohos/flutter_ohos` 依赖而无法编译；纯 ArkTS 开发可先不执行上述步骤。

@@ -1,6 +1,7 @@
 {
   "src": [
     "pages/Home",
-    "pages/HomeInventory"
+    "pages/HomeInventory",
+    "pages/FlutterModuleHost"
   ]
 }

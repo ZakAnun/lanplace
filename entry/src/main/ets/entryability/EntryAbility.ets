@@ -1,6 +1,7 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import { FlutterManager } from '@ohos/flutter_ohos';
 import { AppleTheme } from '../common/AppleTheme';
 import { WindowLayoutStore } from '../common/WindowLayoutStore';
 import { HomeInventoryCoordinator } from '../service/HomeInventoryCoordinator';
@@ -15,10 +16,12 @@ export default class EntryAbility extends UIAbility {
   };
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    FlutterManager.getInstance().pushUIAbility(this);
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
   }
 
   onDestroy(): void {
+    FlutterManager.getInstance().popUIAbility(this);
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onDestroy');
   }
 
@@ -51,6 +54,7 @@ export default class EntryAbility extends UIAbility {
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
+    FlutterManager.getInstance().pushWindowStage(this, windowStage);
 
     try {
       const mainWindow = windowStage.getMainWindowSync();
@@ -80,6 +84,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onWindowStageDestroy(): void {
+    FlutterManager.getInstance().popWindowStage(this);
     if (this.mainWindow !== null) {
       try {
         this.mainWindow.off('windowSizeChange', this.onWindowSizeChange);

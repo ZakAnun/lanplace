@@ -5,6 +5,10 @@
   "main": "",
   "author": "",
   "license": "",
-  "dependencies": {}
+  "dependencies": {
+    "@ohos/flutter_ohos": "",
+    "flutter_native_arm64_v8a": "",
+    "@ohos/flutter_module": ""
+  }
 }
 

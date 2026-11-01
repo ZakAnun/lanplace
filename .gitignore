@@ -5,6 +5,20 @@
 
 /node_modules
 /oh_modules
+/har/*.har
+/flutter_module/.dart_tool/
+/flutter_module/.android/
+/flutter_module/.ios/
+/flutter_module/.ohos/
+/flutter_module/.flutter-plugins
+/flutter_module/.flutter-plugins-dependencies
+/har/*.har
+/flutter_module/.dart_tool/
+/flutter_module/.android/
+/flutter_module/.ios/
+/flutter_module/.ohos/
+/flutter_module/.flutter-plugins
+/flutter_module/.flutter-plugins-dependencies
 /local.properties
 /.idea
 **/build
