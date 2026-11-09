@@ -2,11 +2,11 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "module description"
+      "value": "在本机扫描并展示周围蓝牙设备，以及当前所连 Wi‑Fi 下通过 mDNS 发现的局域网服务"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "description"
+      "value": "蓝域入口：附近蓝牙与局域网设备发现，扫描结果仅在本机显示"
     },
     {
       "name": "EntryAbility_label",
