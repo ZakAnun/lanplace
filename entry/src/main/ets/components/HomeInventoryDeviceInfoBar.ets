@@ -29,7 +29,7 @@ export struct HomeInventoryDeviceInfoBar {
           .width('100%')
       }
       .width('100%')
-      .padding(16)
+      .padding({ top: 16, bottom: 16 })
     } else {
       Column({ space: 8 }) {
         Row({ space: 8 }) {

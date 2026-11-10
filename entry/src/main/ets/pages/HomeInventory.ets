@@ -284,6 +284,7 @@ struct HomeInventory {
       .backgroundColor(AppleTheme.CANVAS)
       .border({ width: 1, color: AppleTheme.PRIMARY })
       .borderRadius(AppleTheme.RADIUS_PILL)
+      .width('100%')
       .accessibilityText($r('app.string.a11y_stop_scan'))
       .onClick(() => this.stopScan())
   }
@@ -295,6 +296,7 @@ struct HomeInventory {
       .fontColor(AppleTheme.CANVAS)
       .backgroundColor(AppleTheme.PRIMARY)
       .borderRadius(AppleTheme.RADIUS_PILL)
+      .width('100%')
       .accessibilityText($r('app.string.a11y_rescan'))
       .onClick(() => {
         this.startInventoryScan().catch(() => {
@@ -346,7 +348,8 @@ struct HomeInventory {
         isLandscapeLayout: this.pageLandscape,
         windowHeightVp: this.mainWindowHeightVp(),
         wifiSsid: this.wifiSsid,
-        footerIconAction: this.phase === InventoryUiPhase.Scanning ? this.scanFooterIcon : this.rescanFooterIcon
+        footerIconAction: this.phase === InventoryUiPhase.Scanning ? this.scanFooterIcon : this.rescanFooterIcon,
+        landscapeScanAction: this.phase === InventoryUiPhase.Scanning ? this.scanStopButton : this.rescanButton
       })
         .layoutWeight(1)
         .width('100%')

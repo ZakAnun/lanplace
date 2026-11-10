@@ -24,6 +24,7 @@ export struct HomeInventoryPanel {
   @State radarCanvasSize: number = 280;
   @State showDevicePickerSheet: boolean = false;
   @BuilderParam footerIconAction: () => void = this.emptySlot;
+  @BuilderParam landscapeScanAction: () => void = this.emptySlot;
 
   @Builder
   emptySlot() {
@@ -93,7 +94,8 @@ export struct HomeInventoryPanel {
       return;
     }
     const zoneW = radarZoneWidth(this.layoutWidth, this.isLandscapeLayout);
-    this.radarCanvasSize = computeRadarCanvasSize(zoneW, this.layoutHeight, this.isLandscapeLayout);
+    const showPicker = this.isLandscapeLayout ? false : this.devices.length > 0;
+    this.radarCanvasSize = computeRadarCanvasSize(zoneW, this.layoutHeight, this.isLandscapeLayout, showPicker);
   }
 
   @Builder
@@ -115,18 +117,24 @@ export struct HomeInventoryPanel {
         .fontColor(AppleTheme.INK_MUTED)
         .width('100%')
         .textAlign(TextAlign.Center)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
     } else if (this.scanning) {
       Text($r('app.string.inventory_scanning_hint'))
         .fontSize(AppleTheme.FONT_CAPTION)
         .fontColor(AppleTheme.INK_MUTED)
         .width('100%')
         .textAlign(TextAlign.Center)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
     } else {
       Text($r('app.string.inventory_empty'))
         .fontSize(AppleTheme.FONT_CAPTION)
         .fontColor(AppleTheme.INK_MUTED)
         .width('100%')
         .textAlign(TextAlign.Center)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
   }
 
@@ -221,6 +229,88 @@ export struct HomeInventoryPanel {
   }
 
   @Builder
+  landscapeCenter() {
+    Column() {
+      this.radarBlock()
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .clip(true)
+  }
+
+  @Builder
+  landscapeRailStatus() {
+    Column({ space: 2 }) {
+      Row({ space: 4 }) {
+        Text('蓝牙')
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+        Text('· 局域网')
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .layoutWeight(1)
+      }
+      .width('100%')
+      if (this.wifiSsid.length > 0) {
+        Text($r('app.string.inventory_wifi_ssid', this.wifiSsid))
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+      } else if (this.devices.length > 0) {
+        Text($r('app.string.inventory_device_count', this.devices.length))
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+      } else if (this.scanning) {
+        Text($r('app.string.inventory_scanning_hint'))
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+      } else {
+        Text($r('app.string.inventory_empty'))
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+      }
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  landscapeRightRail() {
+    Column({ space: 8 }) {
+      this.landscapeScanAction()
+      this.textDevicePickerEntry()
+      this.landscapeRailStatus()
+      Column() {
+        HomeInventoryDeviceInfoBar({ device: this.selectedDevice() })
+      }
+      .layoutWeight(1)
+      .width('100%')
+      .clip(true)
+    }
+    .width(LANDSCAPE_RIGHT_RAIL_WIDTH)
+    .height('100%')
+    .padding(8)
+    .backgroundColor(AppleTheme.CANVAS)
+    .clip(true)
+    .alignItems(HorizontalAlign.Center)
+  }
+
+  @Builder
   radarStage() {
     Column({ space: 8 }) {
       this.wifiBanner()
@@ -266,26 +356,13 @@ export struct HomeInventoryPanel {
   landscapeBody() {
     Row({ space: 12 }) {
       Column() {
-        this.radarStage()
+        this.landscapeCenter()
       }
       .layoutWeight(1)
       .height('100%')
       .alignItems(HorizontalAlign.Center)
 
-      Column() {
-        Blank()
-          .layoutWeight(1)
-        Row() {
-          this.footerIconAction()
-        }
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
-        Blank()
-          .layoutWeight(1)
-      }
-      .width(LANDSCAPE_RIGHT_RAIL_WIDTH)
-      .height('100%')
-      .alignItems(HorizontalAlign.Center)
+      this.landscapeRightRail()
     }
     .width('100%')
     .height('100%')
