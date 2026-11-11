@@ -284,13 +284,40 @@ struct HomeInventory {
       .backgroundColor(AppleTheme.CANVAS)
       .border({ width: 1, color: AppleTheme.PRIMARY })
       .borderRadius(AppleTheme.RADIUS_PILL)
-      .width('100%')
       .accessibilityText($r('app.string.a11y_stop_scan'))
       .onClick(() => this.stopScan())
   }
 
   @Builder
   rescanButton() {
+    Button($r('app.string.btn_start_scan'))
+      .fontSize(AppleTheme.FONT_BODY)
+      .fontColor(AppleTheme.CANVAS)
+      .backgroundColor(AppleTheme.PRIMARY)
+      .borderRadius(AppleTheme.RADIUS_PILL)
+      .accessibilityText($r('app.string.a11y_rescan'))
+      .onClick(() => {
+        this.startInventoryScan().catch(() => {
+          this.prompt().showToast({ message: $r('app.string.toast_action_failed') });
+        });
+      })
+  }
+
+  @Builder
+  landscapeScanStopButton() {
+    Button($r('app.string.btn_stop_scan'))
+      .fontSize(AppleTheme.FONT_BODY)
+      .fontColor(AppleTheme.PRIMARY)
+      .backgroundColor(AppleTheme.CANVAS)
+      .border({ width: 1, color: AppleTheme.PRIMARY })
+      .borderRadius(AppleTheme.RADIUS_PILL)
+      .width('100%')
+      .accessibilityText($r('app.string.a11y_stop_scan'))
+      .onClick(() => this.stopScan())
+  }
+
+  @Builder
+  landscapeRescanButton() {
     Button($r('app.string.btn_start_scan'))
       .fontSize(AppleTheme.FONT_BODY)
       .fontColor(AppleTheme.CANVAS)
@@ -349,7 +376,7 @@ struct HomeInventory {
         windowHeightVp: this.mainWindowHeightVp(),
         wifiSsid: this.wifiSsid,
         footerIconAction: this.phase === InventoryUiPhase.Scanning ? this.scanFooterIcon : this.rescanFooterIcon,
-        landscapeScanAction: this.phase === InventoryUiPhase.Scanning ? this.scanStopButton : this.rescanButton
+        landscapeScanAction: this.phase === InventoryUiPhase.Scanning ? this.landscapeScanStopButton : this.landscapeRescanButton
       })
         .layoutWeight(1)
         .width('100%')
