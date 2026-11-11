@@ -106,6 +106,23 @@ ok(
 ok('portrait home button hugs text', !portraitButton.includes(".width('100%')"));
 ok('portrait home body remains', homeSource.includes('idlePortraitBody()'));
 
+const inventorySource = readFileSync(
+  new URL('../entry/src/main/ets/pages/HomeInventory.ets', import.meta.url),
+  'utf8'
+);
+const portraitStop = inventorySource.slice(
+  inventorySource.indexOf('scanStopButton()'),
+  inventorySource.indexOf('rescanButton()')
+);
+
+ok(
+  'landscape scan action reads phase',
+  inventorySource.includes('landscapeScanAction() {') &&
+    inventorySource.includes('this.phase === InventoryUiPhase.Scanning') &&
+    !inventorySource.includes('? this.landscapeScanStopButton : this.landscapeRescanButton')
+);
+ok('portrait stop button hugs text', !portraitStop.includes(".width('100%')"));
+
 console.log('---');
 console.log(failed === 0 ? 'All local layout checks passed.' : `${failed} check(s) failed.`);
 process.exit(failed ? 1 : 0);

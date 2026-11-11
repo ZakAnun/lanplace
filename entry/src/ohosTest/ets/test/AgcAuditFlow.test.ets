@@ -107,6 +107,31 @@ export default function agcAuditFlowTest() {
       done();
     });
 
+    it('scanLabelStaysWithPhaseAcrossRotation', 0, async (done: Function) => {
+      await driver.setDisplayRotation(DisplayRotation.ROTATION_0);
+      await driver.delayMs(PAGE_WAIT_MS);
+      await ensureInventoryPage(driver);
+      const alreadyScanning = await componentExists(driver, ON.text('停止扫描'));
+      if (!alreadyScanning) {
+        expect(await existThenClick(driver, ON.text('开始扫描'))).assertTrue();
+      }
+      expect(await componentExists(driver, ON.text('停止扫描'))).assertTrue();
+      await rotateToLandscape(driver);
+      const stopNow = await driver.findComponents(ON.text('停止扫描'));
+      const startNow = await driver.findComponents(ON.text('开始扫描'));
+      expect(stopNow != null && stopNow.length > 0).assertTrue();
+      expect(startNow == null || startNow.length === 0).assertTrue();
+      await driver.waitForComponent(ON.text('开始扫描'), 40000);
+      const stopLater = await driver.findComponents(ON.text('停止扫描'));
+      expect(stopLater == null || stopLater.length === 0).assertTrue();
+      await driver.setDisplayRotation(DisplayRotation.ROTATION_0);
+      await driver.delayMs(PAGE_WAIT_MS);
+      expect(await componentExists(driver, ON.text('开始扫描'))).assertTrue();
+      const stopPortrait = await driver.findComponents(ON.text('停止扫描'));
+      expect(stopPortrait == null || stopPortrait.length === 0).assertTrue();
+      done();
+    });
+
     it('inventoryScanControlsReachable', 0, async (done: Function) => {
       await existThenClick(driver, ON.text('发现附近设备'));
       await sleep(PAGE_WAIT_MS);
