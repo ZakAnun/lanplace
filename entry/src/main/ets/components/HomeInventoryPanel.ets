@@ -296,7 +296,10 @@ export struct HomeInventoryPanel {
       this.textDevicePickerEntry()
       this.landscapeRailStatus()
       Column() {
-        HomeInventoryDeviceInfoBar({ device: this.selectedDevice() })
+        HomeInventoryDeviceInfoBar({
+          device: this.selectedDevice(),
+          emptyStateHorizontalPadding: 0
+        })
       }
       .layoutWeight(1)
       .width('100%')

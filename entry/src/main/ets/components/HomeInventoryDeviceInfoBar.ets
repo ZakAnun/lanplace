@@ -14,6 +14,8 @@ export struct HomeInventoryDeviceInfoBar {
     extraLine: '',
     rssi: 0
   };
+  /** 空状态左右内边距。默认 16vp；横屏右栏传 0，与通栏扫描按钮对齐。 */
+  @Prop emptyStateHorizontalPadding: number = 16;
 
   private kindLabel(): string {
     return this.device.kind === InventoryDeviceKind.Lan ? '局域网' : '蓝牙';
@@ -29,7 +31,12 @@ export struct HomeInventoryDeviceInfoBar {
           .width('100%')
       }
       .width('100%')
-      .padding({ top: 16, bottom: 16 })
+      .padding({
+        top: 16,
+        bottom: 16,
+        left: this.emptyStateHorizontalPadding,
+        right: this.emptyStateHorizontalPadding
+      })
     } else {
       Column({ space: 8 }) {
         Row({ space: 8 }) {
