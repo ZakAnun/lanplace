@@ -22,6 +22,8 @@ struct Home {
   @State pageAreaWidth: number = 0;
   @State pageAreaHeight: number = 0;
   @State pageLandscape: boolean = false;
+  private landscapeRadarColumnWidth: number = 0;
+  private landscapeRadarColumnHeight: number = 0;
   @StorageLink(WindowLayoutStore.WIDTH_KEY) @Watch('onWindowMetricsChanged') mainWindowWidth: number = 0;
   @StorageLink(WindowLayoutStore.HEIGHT_KEY) @Watch('onWindowMetricsChanged') mainWindowHeight: number = 0;
   private privacyDialogController: CustomDialogController | null = null;
@@ -107,16 +109,36 @@ struct Home {
   }
 
   private refreshIdleRadarSize(): void {
+    if (this.pageLandscape) {
+      if (this.landscapeRadarColumnWidth <= 0 || this.landscapeRadarColumnHeight <= 0) {
+        return;
+      }
+      this.idleRadarCanvasSize = computeRadarCanvasSize(
+        this.landscapeRadarColumnWidth,
+        this.landscapeRadarColumnHeight,
+        true,
+        false
+      );
+      return;
+    }
     if (this.pageAreaWidth <= 0 || this.pageAreaHeight <= 0) {
       return;
     }
-    const zoneW = radarZoneWidth(this.pageAreaWidth, this.pageLandscape);
+    const zoneW = radarZoneWidth(this.pageAreaWidth, false);
     this.idleRadarCanvasSize = computeRadarCanvasSize(
       zoneW,
       this.pageAreaHeight,
-      this.pageLandscape,
+      false,
       false
     );
+  }
+
+  private syncLandscapeRadarColumn(width: number, height: number): void {
+    if (width > 0 && height > 0) {
+      this.landscapeRadarColumnWidth = width;
+      this.landscapeRadarColumnHeight = height;
+      this.refreshIdleRadarSize();
+    }
   }
 
   private syncPageAreaFromChange(width: number, height: number): void {
@@ -308,6 +330,9 @@ struct Home {
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
         .clip(true)
+        .onAreaChange((_old, area) => {
+          this.syncLandscapeRadarColumn(area.width as number, area.height as number);
+        })
 
         this.idleLandscapeRail()
       }
