@@ -304,36 +304,32 @@ struct HomeInventory {
   }
 
   @Builder
-  scanFooterIcon() {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      Text('■')
-        .fontSize(16)
-        .fontColor(AppleTheme.PRIMARY)
-    }
-    .width(48)
-    .height(48)
-    .backgroundColor(AppleTheme.CANVAS)
-    .border({ width: 1, color: AppleTheme.PRIMARY })
-    .accessibilityText($r('app.string.a11y_stop_scan'))
-    .onClick(() => this.stopScan())
+  landscapeScanStopButton() {
+    Button($r('app.string.btn_stop_scan'))
+      .fontSize(AppleTheme.FONT_BODY)
+      .fontColor(AppleTheme.PRIMARY)
+      .backgroundColor(AppleTheme.CANVAS)
+      .border({ width: 1, color: AppleTheme.PRIMARY })
+      .borderRadius(AppleTheme.RADIUS_PILL)
+      .width('100%')
+      .accessibilityText($r('app.string.a11y_stop_scan'))
+      .onClick(() => this.stopScan())
   }
 
   @Builder
-  rescanFooterIcon() {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      Text('↻')
-        .fontSize(20)
-        .fontColor(AppleTheme.CANVAS)
-    }
-    .width(48)
-    .height(48)
-    .backgroundColor(AppleTheme.PRIMARY)
-    .accessibilityText($r('app.string.a11y_rescan'))
-    .onClick(() => {
-      this.startInventoryScan().catch(() => {
-        this.prompt().showToast({ message: $r('app.string.toast_action_failed') });
-      });
-    })
+  landscapeRescanButton() {
+    Button($r('app.string.btn_start_scan'))
+      .fontSize(AppleTheme.FONT_BODY)
+      .fontColor(AppleTheme.CANVAS)
+      .backgroundColor(AppleTheme.PRIMARY)
+      .borderRadius(AppleTheme.RADIUS_PILL)
+      .width('100%')
+      .accessibilityText($r('app.string.a11y_rescan'))
+      .onClick(() => {
+        this.startInventoryScan().catch(() => {
+          this.prompt().showToast({ message: $r('app.string.toast_action_failed') });
+        });
+      })
   }
 
   build() {
@@ -346,7 +342,7 @@ struct HomeInventory {
         isLandscapeLayout: this.pageLandscape,
         windowHeightVp: this.mainWindowHeightVp(),
         wifiSsid: this.wifiSsid,
-        footerIconAction: this.phase === InventoryUiPhase.Scanning ? this.scanFooterIcon : this.rescanFooterIcon
+        landscapeScanAction: this.phase === InventoryUiPhase.Scanning ? this.landscapeScanStopButton : this.landscapeRescanButton
       })
         .layoutWeight(1)
         .width('100%')

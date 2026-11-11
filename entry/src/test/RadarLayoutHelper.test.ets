@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@ohos/hypium';
 import {
+  computeLandscapeLeftChromeVp,
   computeRadarCanvasSize,
   isLandscapeLayout,
   LANDSCAPE_RIGHT_RAIL_WIDTH,
@@ -27,6 +28,18 @@ export default function radarLayoutHelperTest() {
       const size = computeRadarCanvasSize(500, 900, false);
       expect(size >= 200).assertTrue();
       expect(size <= 420).assertTrue();
+    });
+
+    it('landscapeChromeIgnoresPicker', 0, () => {
+      expect(computeLandscapeLeftChromeVp(false)).assertEqual(16);
+      expect(computeLandscapeLeftChromeVp(true)).assertEqual(16);
+    });
+
+    it('landscapeRadarIgnoresPickerHeight', 0, () => {
+      const shortH = 380;
+      const withPicker = computeRadarCanvasSize(300, shortH, true, true);
+      const withoutPicker = computeRadarCanvasSize(300, shortH, true, false);
+      expect(withPicker).assertEqual(withoutPicker);
     });
   });
 }
