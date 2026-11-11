@@ -29,8 +29,8 @@ async function existThenClick(driver: Driver, matcher: On): Promise<boolean> {
 
 async function componentExists(driver: Driver, matcher: On): Promise<boolean> {
   try {
-    await driver.waitForComponent(matcher, FIND_TIMEOUT_MS);
-    return true;
+    const comp = await driver.waitForComponent(matcher, FIND_TIMEOUT_MS);
+    return comp != null;
   } catch (_err) {
     return false;
   }

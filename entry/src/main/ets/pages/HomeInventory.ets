@@ -332,7 +332,7 @@ struct HomeInventory {
       })
   }
 
-  @Builder
+  @LocalBuilder
   landscapeScanAction() {
     if (this.phase === InventoryUiPhase.Scanning) {
       this.landscapeScanStopButton()
@@ -351,9 +351,7 @@ struct HomeInventory {
         isLandscapeLayout: this.pageLandscape,
         windowHeightVp: this.mainWindowHeightVp(),
         wifiSsid: this.wifiSsid,
-        landscapeScanAction: (): void => {
-          this.landscapeScanAction()
-        }
+        landscapeScanAction: this.landscapeScanAction
       })
         .layoutWeight(1)
         .width('100%')
