@@ -5,9 +5,11 @@ import radarDeviceLayoutTest from './RadarDeviceLayout.test';
 import deviceEnvironmentTest from './DeviceEnvironment.test';
 import radarOrbitGeometryTest from './RadarOrbitGeometry.test';
 import devicePickerSheetLayoutTest from './DevicePickerSheetLayout.test';
+import agcAuditLayoutTest from './AgcAuditLayout.test';
 
 export default function testsuite() {
   localUnitTest();
+  agcAuditLayoutTest();
   bleAdvertParserTest();
   radarLayoutHelperTest();
   radarDeviceLayoutTest();
