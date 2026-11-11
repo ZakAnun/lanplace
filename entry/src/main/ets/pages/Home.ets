@@ -129,27 +129,28 @@ struct Home {
   }
 
   onWindowMetricsChanged(): void {
-    this.recomputePageLandscape();
+    if (this.mainWindowWidth > 0 && this.mainWindowHeight > 0) {
+      this.applyPageLandscape(this.mainWindowWidth, this.mainWindowHeight);
+    } else {
+      this.applyPageLandscape(this.pageAreaWidth, this.pageAreaHeight);
+    }
     this.refreshIdleRadarSize();
   }
 
-  private recomputePageLandscape(): void {
-    let landscape = false;
-    if (this.pageAreaWidth > 0 && this.pageAreaHeight > 0) {
-      landscape = landscape || isLandscapeLayout(this.pageAreaWidth, this.pageAreaHeight);
+  private applyPageLandscape(width: number, height: number): void {
+    if (width > 0 && height > 0) {
+      this.pageLandscape = isLandscapeLayout(width, height);
     }
-    if (this.mainWindowWidth > 0 && this.mainWindowHeight > 0) {
-      landscape = landscape || isLandscapeLayout(this.mainWindowWidth, this.mainWindowHeight);
-    }
-    this.pageLandscape = landscape;
   }
 
   private syncPageOrientation(areaWidth: number, areaHeight: number): void {
-    if (areaWidth > 0 && areaHeight > 0) {
-      this.recomputePageLandscape();
-    } else if (this.mainWindowWidth > 0 && this.mainWindowHeight > 0) {
-      this.recomputePageLandscape();
+    let width = areaWidth;
+    let height = areaHeight;
+    if (width <= 0 || height <= 0) {
+      width = this.mainWindowWidth;
+      height = this.mainWindowHeight;
     }
+    this.applyPageLandscape(width, height);
   }
 
   private openHomeInventory(): void {
