@@ -84,6 +84,29 @@ export default function agcAuditFlowTest() {
       done();
     });
 
+    it('homeLandscapeKeepsTitleRadarAndRightRail', 0, async (done: Function) => {
+      await existThenClick(driver, ON.text('同意并继续'));
+      await sleep(PAGE_WAIT_MS);
+      expect(await componentExists(driver, ON.text('发现附近设备'))).assertTrue();
+      await rotateToLandscape(driver);
+      const title = await driver.findComponent(ON.text('蓝域'));
+      const action = await driver.findComponent(ON.text('发现附近设备'));
+      const privacy = await driver.findComponent(ON.text('隐私'));
+      const caption = await driver.findComponent(ON.text('发现周围蓝牙与当前 Wi‑Fi 网络设备'));
+      const titleBounds = await title.getBounds();
+      const actionBounds = await action.getBounds();
+      const privacyBounds = await privacy.getBounds();
+      const captionBounds = await caption.getBounds();
+      expect(titleBounds.bottom <= actionBounds.top + 4).assertTrue();
+      expect(actionBounds.left >= titleBounds.right - 4).assertTrue();
+      expect(Math.abs(privacyBounds.left - actionBounds.left) < 48).assertTrue();
+      expect(captionBounds.left + 8 >= actionBounds.left).assertTrue();
+      expect(captionBounds.right <= actionBounds.right + 24).assertTrue();
+      await driver.setDisplayRotation(DisplayRotation.ROTATION_0);
+      await driver.delayMs(PAGE_WAIT_MS);
+      done();
+    });
+
     it('inventoryScanControlsReachable', 0, async (done: Function) => {
       await existThenClick(driver, ON.text('发现附近设备'));
       await sleep(PAGE_WAIT_MS);

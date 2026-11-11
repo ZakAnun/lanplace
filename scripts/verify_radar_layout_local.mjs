@@ -3,6 +3,7 @@
  * 本地复刻 RadarLayoutHelper 单测逻辑（无需模拟器），用于横屏改版快速验收。
  * 与 entry/src/test/RadarLayoutHelper.test.ets 断言一致。
  */
+import { readFileSync } from 'node:fs';
 const MIN_RADAR = 200;
 const MAX_RADAR = 420;
 const LANDSCAPE_RIGHT_RAIL_WIDTH = 176;
@@ -82,6 +83,28 @@ ok(
   'landscape zones do not overlap',
   zoneW + 12 + LANDSCAPE_RIGHT_RAIL_WIDTH <= 780 + 1 && zoneW >= 160
 );
+
+const homeSource = readFileSync(
+  new URL('../entry/src/main/ets/pages/Home.ets', import.meta.url),
+  'utf8'
+);
+const portraitButtonStart = homeSource.indexOf('idlePrimaryButton()');
+const portraitButtonEnd = homeSource.indexOf('idleLandscape', portraitButtonStart + 1);
+const portraitButton = homeSource.slice(portraitButtonStart, portraitButtonEnd);
+
+ok(
+  'home drops private landscape metrics',
+  !homeSource.includes('HOME_LANDSCAPE_RAIL_WIDTH') &&
+    !homeSource.includes('HOME_LANDSCAPE_VERTICAL_RESERVE_VP')
+);
+ok(
+  'home landscape uses shared rail',
+  homeSource.includes('LANDSCAPE_RIGHT_RAIL_WIDTH') &&
+    homeSource.includes('idleLandscapeHeader()') &&
+    !homeSource.includes('idleLandscapeIconRail')
+);
+ok('portrait home button hugs text', !portraitButton.includes(".width('100%')"));
+ok('portrait home body remains', homeSource.includes('idlePortraitBody()'));
 
 console.log('---');
 console.log(failed === 0 ? 'All local layout checks passed.' : `${failed} check(s) failed.`);

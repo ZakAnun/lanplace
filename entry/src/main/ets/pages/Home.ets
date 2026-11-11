@@ -8,14 +8,10 @@ import { PrivacyConsentDialog } from '../components/PrivacyConsentDialog';
 import {
   computeRadarCanvasSize,
   isLandscapeLayout,
+  LANDSCAPE_RIGHT_RAIL_WIDTH,
   radarZoneWidth
 } from '../common/RadarLayoutHelper';
 import { WindowLayoutStore } from '../common/WindowLayoutStore';
-
-/** 首页横屏图标栏。附近设备页使用 LANDSCAPE_RIGHT_RAIL_WIDTH（176vp）。 */
-const HOME_LANDSCAPE_RAIL_WIDTH: number = 84;
-/** 首页横屏雷达竖向留白。附近设备页使用 16vp 雷达内边距。 */
-const HOME_LANDSCAPE_VERTICAL_RESERVE_VP: number = 72;
 
 @Entry
 @Component
@@ -114,13 +110,12 @@ struct Home {
     if (this.pageAreaWidth <= 0 || this.pageAreaHeight <= 0) {
       return;
     }
-    const zoneW = radarZoneWidth(this.pageAreaWidth, this.pageLandscape, HOME_LANDSCAPE_RAIL_WIDTH);
+    const zoneW = radarZoneWidth(this.pageAreaWidth, this.pageLandscape);
     this.idleRadarCanvasSize = computeRadarCanvasSize(
       zoneW,
       this.pageAreaHeight,
       this.pageLandscape,
-      false,
-      HOME_LANDSCAPE_VERTICAL_RESERVE_VP
+      false
     );
   }
 
@@ -134,28 +129,27 @@ struct Home {
   }
 
   onWindowMetricsChanged(): void {
-    if (this.mainWindowWidth > 0 && this.mainWindowHeight > 0) {
-      this.applyPageLandscape(this.mainWindowWidth, this.mainWindowHeight);
-    } else {
-      this.applyPageLandscape(this.pageAreaWidth, this.pageAreaHeight);
-    }
+    this.recomputePageLandscape();
     this.refreshIdleRadarSize();
   }
 
-  private applyPageLandscape(width: number, height: number): void {
-    if (width > 0 && height > 0) {
-      this.pageLandscape = isLandscapeLayout(width, height);
+  private recomputePageLandscape(): void {
+    let landscape = false;
+    if (this.pageAreaWidth > 0 && this.pageAreaHeight > 0) {
+      landscape = landscape || isLandscapeLayout(this.pageAreaWidth, this.pageAreaHeight);
     }
+    if (this.mainWindowWidth > 0 && this.mainWindowHeight > 0) {
+      landscape = landscape || isLandscapeLayout(this.mainWindowWidth, this.mainWindowHeight);
+    }
+    this.pageLandscape = landscape;
   }
 
   private syncPageOrientation(areaWidth: number, areaHeight: number): void {
-    let width = areaWidth;
-    let height = areaHeight;
-    if (width <= 0 || height <= 0) {
-      width = this.mainWindowWidth;
-      height = this.mainWindowHeight;
+    if (areaWidth > 0 && areaHeight > 0) {
+      this.recomputePageLandscape();
+    } else if (this.mainWindowWidth > 0 && this.mainWindowHeight > 0) {
+      this.recomputePageLandscape();
     }
-    this.applyPageLandscape(width, height);
   }
 
   private openHomeInventory(): void {
@@ -215,46 +209,60 @@ struct Home {
   }
 
   @Builder
-  idleLandscapeIconRail() {
-    Column({ space: 14 }) {
-      Text('近')
-        .fontSize(12)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(AppleTheme.INK_MUTED)
+  idleLandscapeHeader() {
+    Row() {
       Blank()
         .layoutWeight(1)
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        Text('⌕')
-          .fontSize(22)
-          .fontColor(AppleTheme.CANVAS)
-          .fontWeight(FontWeight.Medium)
-      }
-      .width(48)
-      .height(48)
+      Text($r('app.string.EntryAbility_label'))
+        .fontSize(20)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppleTheme.INK)
+      Blank()
+        .layoutWeight(1)
+    }
+    .width('100%')
+    .padding({ bottom: 4 })
+  }
+
+  @Builder
+  idleLandscapePrimaryButton() {
+    Button($r('app.string.btn_home_inventory'))
+      .fontSize(AppleTheme.FONT_BODY)
+      .fontColor(AppleTheme.CANVAS)
       .backgroundColor(AppleTheme.PRIMARY)
+      .borderRadius(AppleTheme.RADIUS_PILL)
+      .width('100%')
+      .padding({ left: 22, right: 22, top: 11, bottom: 11 })
       .accessibilityText($r('app.string.a11y_home_inventory'))
       .onClick(() => {
         this.onPrimaryAction();
       })
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        Text('i')
-          .fontSize(16)
-          .fontColor(AppleTheme.PRIMARY)
-          .fontWeight(FontWeight.Medium)
+  }
+
+  @Builder
+  idleLandscapeRail() {
+    Column({ space: 8 }) {
+      this.idleLandscapePrimaryButton()
+      Text($r('app.string.home_idle_caption'))
+        .fontSize(AppleTheme.FONT_CAPTION)
+        .fontColor(AppleTheme.INK_MUTED)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+      Blank()
+        .layoutWeight(1)
+      Row() {
+        this.idlePrivacyLink()
       }
-      .width(48)
-      .height(48)
-      .backgroundColor(AppleTheme.CANVAS)
-      .border({ width: 1, color: AppleTheme.PRIMARY })
-      .accessibilityText($r('app.string.a11y_privacy'))
-      .onClick(() => {
-        this.openPrivacyPolicy();
-      })
+      .width('100%')
+      .justifyContent(FlexAlign.Start)
     }
-    .width(HOME_LANDSCAPE_RAIL_WIDTH)
+    .width(LANDSCAPE_RIGHT_RAIL_WIDTH)
     .height('100%')
-    .alignItems(HorizontalAlign.Center)
-    .padding({ top: 8, bottom: 8 })
+    .padding(8)
+    .backgroundColor(AppleTheme.CANVAS)
+    .clip(true)
+    .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
@@ -288,20 +296,25 @@ struct Home {
 
   @Builder
   idleLandscapeBody() {
-    Row({ space: 12 }) {
-      Column() {
-        this.idleRadarBlock()
-      }
-      .layoutWeight(1)
-      .height('100%')
-      .justifyContent(FlexAlign.Center)
-      .alignItems(HorizontalAlign.Center)
+    Column({ space: 12 }) {
+      this.idleLandscapeHeader()
+      Row({ space: 12 }) {
+        Column() {
+          this.idleRadarBlock()
+        }
+        .layoutWeight(1)
+        .height('100%')
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .clip(true)
 
-      this.idleLandscapeIconRail()
+        this.idleLandscapeRail()
+      }
+      .width('100%')
+      .layoutWeight(1)
     }
     .width('100%')
     .height('100%')
-    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
@@ -326,9 +339,6 @@ struct Home {
       ? { left: 16, right: 16, top: 12, bottom: 12 }
       : { left: 24, right: 24, top: 24, bottom: 24 })
     .backgroundColor(AppleTheme.CANVAS)
-    .onAreaChange((_old, area) => {
-      this.syncPageAreaFromChange(area.width as number, area.height as number);
-    })
   }
 
   build() {
@@ -341,5 +351,8 @@ struct Home {
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(AppleTheme.CANVAS)
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+    .onAreaChange((_old, area) => {
+      this.syncPageAreaFromChange(area.width as number, area.height as number);
+    })
   }
 }
