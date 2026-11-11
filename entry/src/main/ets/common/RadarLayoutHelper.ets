@@ -11,12 +11,16 @@ export function isLandscapeLayout(width: number, height: number): boolean {
   return width > height;
 }
 
-export function radarZoneWidth(panelWidth: number, landscape: boolean): number {
+export function radarZoneWidth(
+  panelWidth: number,
+  landscape: boolean,
+  railWidth: number = LANDSCAPE_RIGHT_RAIL_WIDTH
+): number {
   if (!landscape || panelWidth <= 0) {
     return panelWidth;
   }
   const gap = 12;
-  return Math.max(160, panelWidth - LANDSCAPE_RIGHT_RAIL_WIDTH - gap);
+  return Math.max(160, panelWidth - railWidth - gap);
 }
 
 export function computeLandscapeLeftChromeVp(showPickerEntry: boolean): number {
@@ -30,12 +34,16 @@ export function computeRadarCanvasSize(
   radarZoneWidth: number,
   height: number,
   landscape: boolean,
-  showPickerEntry: boolean = false
+  showPickerEntry: boolean = false,
+  landscapeVerticalReserve: number = -1
 ): number {
   if (radarZoneWidth <= 0 || height <= 0) {
     return 280;
   }
-  const reserveVertical = landscape ? computeLandscapeLeftChromeVp(showPickerEntry) : 128;
+  const landscapeReserve = landscapeVerticalReserve >= 0
+    ? landscapeVerticalReserve
+    : computeLandscapeLeftChromeVp(showPickerEntry);
+  const reserveVertical = landscape ? landscapeReserve : 128;
   const byWidth = radarZoneWidth - 16;
   const byHeight = height - reserveVertical;
   return clampRadar(Math.min(byWidth, byHeight));

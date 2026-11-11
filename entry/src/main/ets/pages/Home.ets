@@ -8,10 +8,14 @@ import { PrivacyConsentDialog } from '../components/PrivacyConsentDialog';
 import {
   computeRadarCanvasSize,
   isLandscapeLayout,
-  LANDSCAPE_RIGHT_RAIL_WIDTH,
   radarZoneWidth
 } from '../common/RadarLayoutHelper';
 import { WindowLayoutStore } from '../common/WindowLayoutStore';
+
+/** 首页横屏图标栏。附近设备页使用 LANDSCAPE_RIGHT_RAIL_WIDTH（176vp）。 */
+const HOME_LANDSCAPE_RAIL_WIDTH: number = 84;
+/** 首页横屏雷达竖向留白。附近设备页使用 16vp 雷达内边距。 */
+const HOME_LANDSCAPE_VERTICAL_RESERVE_VP: number = 72;
 
 @Entry
 @Component
@@ -110,8 +114,14 @@ struct Home {
     if (this.pageAreaWidth <= 0 || this.pageAreaHeight <= 0) {
       return;
     }
-    const zoneW = radarZoneWidth(this.pageAreaWidth, this.pageLandscape);
-    this.idleRadarCanvasSize = computeRadarCanvasSize(zoneW, this.pageAreaHeight, this.pageLandscape);
+    const zoneW = radarZoneWidth(this.pageAreaWidth, this.pageLandscape, HOME_LANDSCAPE_RAIL_WIDTH);
+    this.idleRadarCanvasSize = computeRadarCanvasSize(
+      zoneW,
+      this.pageAreaHeight,
+      this.pageLandscape,
+      false,
+      HOME_LANDSCAPE_VERTICAL_RESERVE_VP
+    );
   }
 
   private syncPageAreaFromChange(width: number, height: number): void {
@@ -241,7 +251,7 @@ struct Home {
         this.openPrivacyPolicy();
       })
     }
-    .width(LANDSCAPE_RIGHT_RAIL_WIDTH)
+    .width(HOME_LANDSCAPE_RAIL_WIDTH)
     .height('100%')
     .alignItems(HorizontalAlign.Center)
     .padding({ top: 8, bottom: 8 })

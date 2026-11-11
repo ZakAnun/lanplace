@@ -23,7 +23,6 @@ export struct HomeInventoryPanel {
   @State layoutHeight: number = 0;
   @State radarCanvasSize: number = 280;
   @State showDevicePickerSheet: boolean = false;
-  @BuilderParam footerIconAction: () => void = this.emptySlot;
   @BuilderParam landscapeScanAction: () => void = this.emptySlot;
 
   @Builder
@@ -117,24 +116,18 @@ export struct HomeInventoryPanel {
         .fontColor(AppleTheme.INK_MUTED)
         .width('100%')
         .textAlign(TextAlign.Center)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
     } else if (this.scanning) {
       Text($r('app.string.inventory_scanning_hint'))
         .fontSize(AppleTheme.FONT_CAPTION)
         .fontColor(AppleTheme.INK_MUTED)
         .width('100%')
         .textAlign(TextAlign.Center)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
     } else {
       Text($r('app.string.inventory_empty'))
         .fontSize(AppleTheme.FONT_CAPTION)
         .fontColor(AppleTheme.INK_MUTED)
         .width('100%')
         .textAlign(TextAlign.Center)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
   }
 
@@ -244,10 +237,13 @@ export struct HomeInventoryPanel {
   landscapeRailStatus() {
     Column({ space: 2 }) {
       Row({ space: 4 }) {
-        Text('蓝牙')
+        Text($r('app.string.inventory_legend_ble'))
           .fontSize(AppleTheme.FONT_CAPTION)
           .fontColor(AppleTheme.INK_MUTED)
-        Text('· 局域网')
+        Text('·')
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+        Text($r('app.string.inventory_legend_lan'))
           .fontSize(AppleTheme.FONT_CAPTION)
           .fontColor(AppleTheme.INK_MUTED)
           .maxLines(1)
@@ -296,14 +292,19 @@ export struct HomeInventoryPanel {
       this.textDevicePickerEntry()
       this.landscapeRailStatus()
       Column() {
-        HomeInventoryDeviceInfoBar({
-          device: this.selectedDevice(),
-          emptyStateHorizontalPadding: 0
-        })
+        Scroll() {
+          HomeInventoryDeviceInfoBar({
+            device: this.selectedDevice(),
+            emptyStateHorizontalPadding: 0
+          })
+        }
+        .width('100%')
+        .height('100%')
+        .scrollBar(BarState.Off)
+        .align(Alignment.Top)
       }
       .layoutWeight(1)
       .width('100%')
-      .clip(true)
     }
     .width(LANDSCAPE_RIGHT_RAIL_WIDTH)
     .height('100%')

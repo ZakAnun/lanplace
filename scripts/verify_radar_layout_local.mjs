@@ -76,7 +76,7 @@ const chrome = computeLandscapeLeftChromeVp(true);
 ok('landscape total fits panel height', radarH + chrome <= phoneLandscapeH + 1);
 
 // AGC 审核：右侧详情轨宽度与 AgcAuditLayout.test.ets 一致
-ok('agc audit right rail width', LANDSCAPE_RIGHT_RAIL_WIDTH >= 160);
+ok('agc audit right rail width', LANDSCAPE_RIGHT_RAIL_WIDTH === 176);
 ok('agc audit radar min visible', radarH >= 160);
 ok(
   'landscape zones do not overlap',
