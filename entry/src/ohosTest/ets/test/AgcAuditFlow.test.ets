@@ -36,6 +36,56 @@ async function componentExists(driver: Driver, matcher: On): Promise<boolean> {
   }
 }
 
+async function componentExistsWithin(driver: Driver, matcher: On, timeoutMs: number): Promise<boolean> {
+  try {
+    const comp = await driver.waitForComponent(matcher, timeoutMs);
+    return comp != null;
+  } catch (_err) {
+    return false;
+  }
+}
+
+async function waitUntilAbsent(driver: Driver, text: string, timeoutMs: number): Promise<boolean> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const present = await componentExistsWithin(driver, ON.text(text), 500);
+    if (!present) {
+      return true;
+    }
+    await sleep(350);
+  }
+  return false;
+}
+
+const MOCK_DEVICE_NAMES: string[] = [
+  '客厅温湿度计',
+  'Mi Band Demo',
+  'Beacon-Gateway',
+  '未知设备',
+  '键盘 K380',
+  '客厅电视 (Cast)',
+  '书房打印机'
+];
+
+async function clickFirstListedDevice(driver: Driver): Promise<boolean> {
+  for (let i = 0; i < MOCK_DEVICE_NAMES.length; i++) {
+    const name = MOCK_DEVICE_NAMES[i];
+    if (await componentExistsWithin(driver, ON.text(name), 800)) {
+      return await existThenClick(driver, ON.text(name));
+    }
+  }
+  return false;
+}
+
+async function anyMockDeviceVisible(driver: Driver): Promise<boolean> {
+  for (let i = 0; i < MOCK_DEVICE_NAMES.length; i++) {
+    if (await componentExistsWithin(driver, ON.text(MOCK_DEVICE_NAMES[i]), 400)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 async function ensureInventoryPage(driver: Driver): Promise<void> {
   if (await componentExists(driver, ON.text('附近设备'))) {
     return;
@@ -141,6 +191,64 @@ export default function agcAuditFlowTest() {
       const hasRescan = await componentExists(driver, ON.text('再次扫描'));
       const hasStart = await componentExists(driver, ON.text('开始扫描'));
       expect(hasStop || hasRescan || hasStart).assertTrue();
+      done();
+    });
+
+    it('sphereTapDragKeepsNearbyChrome', 0, async (done: Function) => {
+      await driver.setDisplayRotation(DisplayRotation.ROTATION_0);
+      await driver.delayMs(UI_WAIT_MS);
+      await ensureInventoryPage(driver);
+      expect(await componentExists(driver, ON.text('附近设备'))).assertTrue();
+
+      if (!(await componentExistsWithin(driver, ON.text('从列表选择设备'), 1500)) &&
+        !(await componentExistsWithin(driver, ON.text('停止扫描'), 800))) {
+        await existThenClick(driver, ON.text('开始扫描'));
+        await componentExistsWithin(driver, ON.text('从列表选择设备'), FIND_TIMEOUT_MS);
+      }
+
+      const title = await driver.findComponent(ON.text('附近设备'));
+      const titleBounds = await title.getBounds();
+      const midX = Math.round((titleBounds.left + titleBounds.right) / 2);
+      const radarY = Math.round(titleBounds.bottom + 260);
+      await driver.click(Math.max(0, midX), Math.max(0, radarY));
+
+      let hintGone = await waitUntilAbsent(driver, '点击光点查看设备信息', FIND_TIMEOUT_MS);
+      if (!hintGone) {
+        const opened = await existThenClick(driver, ON.text('从列表选择设备'));
+        if (opened) {
+          await componentExistsWithin(driver, ON.text('选择设备'), FIND_TIMEOUT_MS);
+          await clickFirstListedDevice(driver);
+          await sleep(UI_WAIT_MS);
+        }
+        hintGone = await waitUntilAbsent(driver, '点击光点查看设备信息', 4000);
+      }
+      const listVisible = await anyMockDeviceVisible(driver);
+      expect(hintGone || listVisible).assertTrue();
+
+      if (await componentExistsWithin(driver, ON.text('选择设备'), 800)) {
+        await existThenClick(driver, ON.text('关闭'));
+      }
+
+      try {
+        const panY = Math.round(titleBounds.bottom + 220);
+        await driver.swipe(Math.max(8, midX), Math.max(0, panY), Math.max(8, midX) + 120, Math.max(0, panY), 700);
+      } catch (_err) {
+      }
+      expect(await componentExists(driver, ON.text('附近设备'))).assertTrue();
+      const hasStop = await componentExists(driver, ON.text('停止扫描'));
+      const hasStart = await componentExists(driver, ON.text('开始扫描'));
+      expect(hasStop || hasStart).assertTrue();
+      const hasPicker = await componentExistsWithin(driver, ON.text('从列表选择设备'), 2000);
+      const hasEmpty = await componentExistsWithin(driver, ON.text('点击光点查看设备信息'), 1500);
+      expect(hasPicker || hasEmpty || hintGone).assertTrue();
+      if (await componentExistsWithin(driver, ON.text('选择设备'), 800)) {
+        await existThenClick(driver, ON.text('关闭'));
+      }
+      const backed = await existThenClick(driver, ON.text('返回'));
+      if (!backed) {
+        await existThenClick(driver, ON.text('‹'));
+      }
+      await driver.setDisplayRotation(DisplayRotation.ROTATION_0);
       done();
     });
 

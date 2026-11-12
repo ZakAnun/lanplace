@@ -1,10 +1,43 @@
+import {
+  Blend,
+  Camera,
+  Color,
+  EnvironmentBackgroundType,
+  Geometry,
+  Light,
+  LightType,
+  MaterialType,
+  Node,
+  Quaternion,
+  RaycastResult,
+  RenderingPipelineType,
+  Scene,
+  SceneResourceFactory,
+  SphereGeometry,
+  UnlitMaterial,
+  Vec2,
+  Vec4
+} from '@kit.ArkGraphics3D';
 import { AppleTheme } from '../common/AppleTheme';
-import { deviceSpherePointForKey, ripplePhaseOffset } from '../common/RadarDeviceLayout';
+import {
+  deviceSpherePointForKey,
+  deviceSpherePointForStableKey,
+  ripplePhaseOffset,
+  SPHERE_RADIUS
+} from '../common/RadarDeviceLayout';
 import {
   canvasLayoutScale,
   clampDeviceOrbitLayout,
   minOrbitRadiusLayoutVp
 } from '../common/RadarOrbitGeometry';
+import {
+  AUTO_ROTATE_YAW_SPEED,
+  clampOrbitPitch,
+  isTapGesture,
+  localToNdc,
+  orbitEye,
+  shouldResumeAutoRotate
+} from '../common/SphereCameraMath';
 import {
   HomeInventoryDevice,
   InventoryDeviceKind
@@ -38,6 +71,15 @@ interface OrbitDrawMetrics {
 const DEFAULT_CANVAS_SIZE: number = 280;
 const FRAME_MS: number = 50;
 const HIT_RADIUS: number = 26;
+const POINT_RADIUS: number = 0.045;
+const SELECTED_POINT_RADIUS: number = 0.06;
+const DRAG_RAD_PER_VP: number = 0.006;
+const SHELL_NAME: string = 'inventoryShell';
+const SHELL_ALPHA: number = 0.16;
+const PRIMARY_G: number = 102 / 255;
+const PRIMARY_B: number = 204 / 255;
+const LAN_G: number = 143 / 255;
+const LAN_B: number = 200 / 255;
 const RIPPLE_PERIOD: number = 3.2;
 const HUB_DIAMETER_BASE: number = 34;
 const HUB_FONT_BASE: number = 11;
@@ -47,8 +89,37 @@ const IDLE_HUB_RIPPLE_ID: string = '__idle_hub__';
 export struct InventoryDiscoveryRadar {
   @Prop @Watch('onActiveChanged') active: boolean = true;
   @Prop @Watch('onDevicesChanged') devices: HomeInventoryDevice[] = [];
-  @Link selectedDeviceKey: string;
+  @Link @Watch('onSelectedChanged') selectedDeviceKey: string;
   @Prop @Watch('onCanvasSizeChanged') canvasSize: number = DEFAULT_CANVAS_SIZE;
+  @State sceneReady: boolean = false;
+  @State sceneFailed: boolean = false;
+  private sceneOpt: SceneOptions | null = null;
+  private sceneRef: Scene | null = null;
+  private cameraRef: Camera | null = null;
+  private factoryRef: SceneResourceFactory | null = null;
+  private pointNodes: Map<string, Geometry> = new Map();
+  private yaw: number = 0;
+  private pitch: number = 0.18;
+  private yawSpeed: number = AUTO_ROTATE_YAW_SPEED;
+  private dragging: boolean = false;
+  private panStartX: number = 0;
+  private panStartY: number = 0;
+  private panLastX: number = 0;
+  private panLastY: number = 0;
+  private panLastTs: number = 0;
+  private coasting: boolean = false;
+  private yawSign: number = 1;
+  private sceneBooting: boolean = false;
+  private sceneBooted: boolean = false;
+  private deviceEpoch: number = 0;
+  private pointSyncTail: Promise<void> = Promise.resolve();
+  private orbitTimerId: number = -1;
+  private lastOrbitMs: number = 0;
+  private frameRenderBroken: boolean = false;
+  private pickSerial: number = 0;
+  private lastPanEndMs: number = 0;
+  private bleMat: UnlitMaterial | null = null;
+  private lanMat: UnlitMaterial | null = null;
   private settings: RenderingContextSettings = new RenderingContextSettings(true);
   private ctx: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
   private tickTimerId: number = -1;
@@ -63,6 +134,7 @@ export struct InventoryDiscoveryRadar {
 
   aboutToAppear(): void {
     this.disposed = false;
+    this.bootScene();
     if (this.active && this.canvasReady) {
       this.startTick();
     }
@@ -70,6 +142,10 @@ export struct InventoryDiscoveryRadar {
 
   onCanvasSizeChanged(): void {
     if (this.disposed || !this.active) {
+      return;
+    }
+    if (this.sceneReady && !this.sceneFailed) {
+      this.applyCamera();
       return;
     }
     this.syncCanvasMetrics();
@@ -84,10 +160,19 @@ export struct InventoryDiscoveryRadar {
       return;
     }
     if (this.active) {
-      this.startTick();
+      if (this.sceneReady && !this.sceneFailed) {
+        this.startOrbitTick();
+      } else {
+        this.startTick();
+      }
     } else {
       this.stopTick();
+      this.stopOrbitTick();
     }
+  }
+
+  onSelectedChanged(): void {
+    this.refreshPointScales();
   }
 
   onDevicesChanged(): void {
@@ -104,12 +189,26 @@ export struct InventoryDiscoveryRadar {
     for (let i = 0; i < removeIds.length; i++) {
       this.deviceFirstSeenMs.delete(removeIds[i]);
     }
+    this.deviceEpoch++;
+    if (this.sceneBooted && !this.sceneFailed) {
+      this.enqueuePointSync();
+    }
   }
 
   aboutToDisappear(): void {
     this.disposed = true;
     this.canvasReady = false;
+    this.sceneReady = false;
     this.stopTick();
+    this.stopOrbitTick();
+    const scene = this.sceneRef;
+    this.sceneRef = null;
+    this.cameraRef = null;
+    this.factoryRef = null;
+    this.pointNodes.clear();
+    if (scene != null) {
+      scene.destroy();
+    }
   }
 
   private syncCanvasMetrics(): void {
@@ -207,6 +306,9 @@ export struct InventoryDiscoveryRadar {
   }
 
   private startTick(): void {
+    if (this.sceneReady && !this.sceneFailed) {
+      return;
+    }
     if (!this.canvasReady || !this.active || this.disposed) {
       return;
     }
@@ -398,6 +500,500 @@ export struct InventoryDiscoveryRadar {
     }
   }
 
+  private markSceneFailed(): void {
+    this.sceneFailed = true;
+    this.sceneReady = false;
+    console.error('InventoryDiscoveryRadar 3D scene failed, canvas fallback');
+    if (this.active && this.canvasReady && !this.disposed) {
+      this.startTick();
+    }
+  }
+
+  private async bootScene(): Promise<void> {
+    if (this.disposed || this.sceneBooting || this.sceneReady || this.sceneFailed) {
+      return;
+    }
+    this.sceneBooting = true;
+    try {
+      const scene = await Scene.load();
+      if (this.disposed) {
+        scene.destroy();
+        return;
+      }
+      const factory = scene.getResourceFactory();
+      const root = scene.root;
+      if (root == null) {
+        throw new Error('scene root missing');
+      }
+      const camera = await factory.createCamera({ name: 'inventoryCam' });
+      camera.enabled = true;
+      camera.fov = 50 * Math.PI / 180;
+      camera.nearPlane = 0.05;
+      camera.farPlane = 30;
+      camera.renderingPipeline = RenderingPipelineType.FORWARD;
+      const clear: Color = { r: 1, g: 1, b: 1, a: 1 };
+      camera.clearColor = clear;
+      this.attachToRoot(root, camera);
+
+      const light: Light = await factory.createLight({ name: 'key' }, LightType.DIRECTIONAL);
+      light.enabled = true;
+      const lightColor: Color = { r: 1, g: 1, b: 1, a: 1 };
+      light.color = lightColor;
+      light.intensity = 6;
+      this.attachToRoot(root, light);
+
+      this.clearSceneBackground(scene);
+      await this.createShell(factory, root);
+      this.bleMat = await this.createUnlit(factory, 'blePointMat', 0, PRIMARY_G, PRIMARY_B, 1, false);
+      this.lanMat = await this.createUnlit(factory, 'lanPointMat', 0, LAN_G, LAN_B, 1, false);
+
+      this.factoryRef = factory;
+      this.sceneRef = scene;
+      this.cameraRef = camera;
+      this.applyCamera();
+      this.sceneBooted = true;
+      this.enqueuePointSync();
+      await this.pointSyncTail;
+      if (this.disposed) {
+        scene.destroy();
+        this.sceneRef = null;
+        return;
+      }
+      this.sceneOpt = { scene: scene, modelType: ModelType.SURFACE };
+      this.sceneFailed = false;
+      this.sceneReady = true;
+      this.stopTick();
+      console.info('InventoryDiscoveryRadar Component3D scene ready');
+      if (this.active) {
+        this.startOrbitTick();
+      }
+    } catch (_err) {
+      if (!this.disposed) {
+        this.markSceneFailed();
+      }
+    }
+  }
+
+  private clearSceneBackground(scene: Scene): void {
+    try {
+      scene.environment.backgroundType = EnvironmentBackgroundType.BACKGROUND_NONE;
+    } catch (_err) {
+    }
+  }
+
+  private attachToRoot(root: Node, node: Node): void {
+    if (node.parent != null) {
+      return;
+    }
+    root.children.append(node);
+  }
+
+  private async createUnlit(factory: SceneResourceFactory, name: string, r: number, g: number, b: number,
+    a: number, transparent: boolean): Promise<UnlitMaterial> {
+    const created = await factory.createMaterial({ name: name }, MaterialType.UNLIT);
+    const mat = created as UnlitMaterial;
+    const factor: Vec4 = { x: r, y: g, z: b, w: a };
+    mat.baseColor.factor = factor;
+    if (transparent) {
+      const blendState: Blend = { enabled: true };
+      mat.blend = blendState;
+      mat.shadowReceiver = false;
+    }
+    return mat;
+  }
+
+  private paintGeometry(geom: Geometry, mat: UnlitMaterial): void {
+    geom.mesh.materialOverride = mat;
+    const subs = geom.mesh.subMeshes;
+    for (let i = 0; i < subs.length; i++) {
+      subs[i].material = mat;
+    }
+  }
+
+  /** 通透外缘：低透明 PRIMARY，不画经线，也不在 3D 路径放中心「近」。 */
+  private async createShell(factory: SceneResourceFactory, root: Node): Promise<void> {
+    const def = new SphereGeometry();
+    def.radius = SPHERE_RADIUS;
+    def.segmentCount = 32;
+    const mesh = await factory.createMesh({ name: 'inventoryShellMesh' }, def);
+    const geom = await factory.createGeometry({ name: SHELL_NAME }, mesh);
+    geom.name = SHELL_NAME;
+    const mat = await this.createUnlit(factory, 'inventoryShellMat', 0, PRIMARY_G, PRIMARY_B, SHELL_ALPHA, true);
+    this.paintGeometry(geom, mat);
+    this.attachToRoot(root, geom);
+  }
+
+  private enqueuePointSync(): void {
+    this.pointSyncTail = this.pointSyncTail
+      .then((): Promise<void> => {
+        return this.syncPointNodes();
+      })
+      .catch((): Promise<void> => {
+        console.error('InventoryDiscoveryRadar point sync failed');
+        return Promise.resolve();
+      });
+  }
+
+  private async syncPointNodes(): Promise<void> {
+    let pass = 0;
+    while (pass < 4) {
+      pass++;
+      const epoch = this.deviceEpoch;
+      await this.syncPointNodesOnce();
+      if (epoch === this.deviceEpoch) {
+        return;
+      }
+    }
+  }
+
+  private async syncPointNodesOnce(): Promise<void> {
+    const factory = this.factoryRef;
+    const scene = this.sceneRef;
+    if (factory == null || scene == null || scene.root == null || this.sceneFailed || this.disposed) {
+      return;
+    }
+    const root = scene.root;
+    const alive: Set<string> = new Set();
+    for (let i = 0; i < this.devices.length; i++) {
+      const key = this.devices[i].deviceKey;
+      if (key.length > 0) {
+        alive.add(key);
+      }
+    }
+    const stale: string[] = [];
+    this.pointNodes.forEach((_geom: Geometry, key: string) => {
+      if (!alive.has(key)) {
+        stale.push(key);
+      }
+    });
+    for (let i = 0; i < stale.length; i++) {
+      const key = stale[i];
+      const node = this.pointNodes.get(key);
+      if (node != null) {
+        this.dropNode(node);
+      }
+      this.pointNodes.delete(key);
+    }
+    for (let i = 0; i < this.devices.length; i++) {
+      const dev = this.devices[i];
+      if (dev.deviceKey.length === 0) {
+        continue;
+      }
+      const existing = this.pointNodes.get(dev.deviceKey);
+      if (existing != null) {
+        existing.visible = true;
+        existing.name = dev.deviceKey;
+        this.applyPointScale(existing, dev.deviceKey);
+        continue;
+      }
+      await this.createPoint(factory, root, dev);
+    }
+  }
+
+  private async createPoint(factory: SceneResourceFactory, root: Node, device: HomeInventoryDevice): Promise<void> {
+    const def = new SphereGeometry();
+    def.radius = POINT_RADIUS;
+    def.segmentCount = 16;
+    const mesh = await factory.createMesh({ name: `pointMesh:${device.deviceKey}` }, def);
+    const geom = await factory.createGeometry({ name: device.deviceKey }, mesh);
+    geom.name = device.deviceKey;
+    const p = deviceSpherePointForStableKey(device.deviceKey);
+    geom.position = { x: p.x, y: p.y, z: p.z };
+    const mat = device.kind === InventoryDeviceKind.Lan ? this.lanMat : this.bleMat;
+    if (mat != null) {
+      this.paintGeometry(geom, mat);
+    }
+    this.applyPointScale(geom, device.deviceKey);
+    geom.visible = true;
+    this.attachToRoot(root, geom);
+    this.pointNodes.set(device.deviceKey, geom);
+  }
+
+  private applyPointScale(node: Geometry, deviceKey: string): void {
+    const selected = deviceKey.length > 0 && deviceKey === this.selectedDeviceKey;
+    const s = selected ? (SELECTED_POINT_RADIUS / POINT_RADIUS) : 1;
+    node.scale = { x: s, y: s, z: s };
+  }
+
+  private refreshPointScales(): void {
+    this.pointNodes.forEach((geom: Geometry, key: string) => {
+      this.applyPointScale(geom, key);
+    });
+  }
+
+  private dropNode(node: Geometry): void {
+    try {
+      node.visible = false;
+      const parent = node.parent;
+      if (parent != null) {
+        parent.children.remove(node);
+      }
+      node.destroy();
+    } catch (_err) {
+    }
+  }
+
+  private applyCamera(): void {
+    const camera = this.cameraRef;
+    if (camera == null) {
+      return;
+    }
+    const eye = orbitEye(this.yaw, this.pitch);
+    camera.position = { x: eye.x, y: eye.y, z: eye.z };
+    camera.rotation = this.lookAtOriginQuaternion(eye.x, eye.y, eye.z);
+  }
+
+  /** 相机默认朝 -Z，用从眼睛指向原点的正交基求 look-at，避免欧拉连乘。 */
+  private lookAtOriginQuaternion(ex: number, ey: number, ez: number): Quaternion {
+    const len = Math.sqrt(ex * ex + ey * ey + ez * ez);
+    if (len < 1e-6) {
+      const identity: Quaternion = { x: 0, y: 0, z: 0, w: 1 };
+      return identity;
+    }
+    const zx = ex / len;
+    const zy = ey / len;
+    const zz = ez / len;
+    let xx = zz;
+    let xy = 0;
+    let xz = -zx;
+    const xl = Math.sqrt(xx * xx + xy * xy + xz * xz);
+    if (xl < 1e-6) {
+      const identity: Quaternion = { x: 0, y: 0, z: 0, w: 1 };
+      return identity;
+    }
+    xx = xx / xl;
+    xy = xy / xl;
+    xz = xz / xl;
+    const yx = zy * xz - zz * xy;
+    const yy = zz * xx - zx * xz;
+    const yz = zx * xy - zy * xx;
+    return this.quaternionFromBasis(xx, xy, xz, yx, yy, yz, zx, zy, zz);
+  }
+
+  private quaternionFromBasis(xx: number, xy: number, xz: number, yx: number, yy: number, yz: number,
+    zx: number, zy: number, zz: number): Quaternion {
+    const trace = xx + yy + zz;
+    let qx = 0;
+    let qy = 0;
+    let qz = 0;
+    let qw = 1;
+    if (trace > 0) {
+      const s = Math.sqrt(trace + 1) * 2;
+      qw = 0.25 * s;
+      qx = (yz - zy) / s;
+      qy = (zx - xz) / s;
+      qz = (xy - yx) / s;
+    } else if (xx > yy && xx > zz) {
+      const s = Math.sqrt(1 + xx - yy - zz) * 2;
+      qw = (yz - zy) / s;
+      qx = 0.25 * s;
+      qy = (yx + xy) / s;
+      qz = (zx + xz) / s;
+    } else if (yy > zz) {
+      const s = Math.sqrt(1 + yy - xx - zz) * 2;
+      qw = (zx - xz) / s;
+      qx = (yx + xy) / s;
+      qy = 0.25 * s;
+      qz = (zy + yz) / s;
+    } else {
+      const s = Math.sqrt(1 + zz - xx - yy) * 2;
+      qw = (xy - yx) / s;
+      qx = (zx + xz) / s;
+      qy = (zy + yz) / s;
+      qz = 0.25 * s;
+    }
+    const q: Quaternion = { x: qx, y: qy, z: qz, w: qw };
+    return q;
+  }
+
+  private startOrbitTick(): void {
+    if (!this.sceneReady || !this.active || this.disposed || this.sceneFailed || this.orbitTimerId >= 0) {
+      return;
+    }
+    this.lastOrbitMs = Date.now();
+    this.orbitTimerId = setInterval(() => {
+      this.onOrbitTick();
+    }, FRAME_MS) as number;
+  }
+
+  private stopOrbitTick(): void {
+    if (this.orbitTimerId >= 0) {
+      clearInterval(this.orbitTimerId);
+      this.orbitTimerId = -1;
+    }
+  }
+
+  private onOrbitTick(): void {
+    if (this.disposed || !this.active || !this.sceneReady || this.sceneFailed) {
+      return;
+    }
+    const now = Date.now();
+    let dt = (now - this.lastOrbitMs) / 1000;
+    this.lastOrbitMs = now;
+    if (dt < 0) {
+      dt = 0;
+    } else if (dt > 0.1) {
+      dt = 0.1;
+    }
+    if (this.coasting) {
+      this.yaw += this.yawSpeed * dt;
+      this.yawSpeed = this.yawSpeed * 0.92;
+      if (shouldResumeAutoRotate(this.yawSpeed)) {
+        const sign = this.yawSign < 0 ? -1 : 1;
+        this.yawSpeed = sign * AUTO_ROTATE_YAW_SPEED;
+        this.coasting = false;
+        this.dragging = false;
+      }
+    } else if (!this.dragging) {
+      this.yaw += this.yawSpeed * dt;
+    }
+    this.applyCamera();
+    this.renderOrbitFrame();
+  }
+
+  private renderOrbitFrame(): void {
+    const scene = this.sceneRef;
+    if (scene == null || this.frameRenderBroken) {
+      return;
+    }
+    try {
+      scene.renderFrame({ alwaysRender: true });
+    } catch (_err) {
+      this.frameRenderBroken = true;
+    }
+  }
+
+  private fingerLocalX(event: GestureEvent): number {
+    const fingers = event.fingerList;
+    if (fingers != null && fingers.length > 0) {
+      return fingers[0].localX;
+    }
+    return this.canvasSize / 2;
+  }
+
+  private fingerLocalY(event: GestureEvent): number {
+    const fingers = event.fingerList;
+    if (fingers != null && fingers.length > 0) {
+      return fingers[0].localY;
+    }
+    return this.canvasSize / 2;
+  }
+
+  private noteYawSign(speed: number): void {
+    if (speed > 0.0001) {
+      this.yawSign = 1;
+    } else if (speed < -0.0001) {
+      this.yawSign = -1;
+    }
+  }
+
+  private onSpherePanStart(event: GestureEvent): void {
+    this.dragging = true;
+    this.coasting = false;
+    this.panStartX = this.fingerLocalX(event);
+    this.panStartY = this.fingerLocalY(event);
+    this.panLastX = event.offsetX;
+    this.panLastY = event.offsetY;
+    this.panLastTs = Date.now();
+  }
+
+  private onSpherePanUpdate(event: GestureEvent): void {
+    const now = Date.now();
+    const dx = event.offsetX - this.panLastX;
+    const dy = event.offsetY - this.panLastY;
+    const prevYaw = this.yaw;
+    this.yaw -= dx * DRAG_RAD_PER_VP;
+    this.pitch = clampOrbitPitch(this.pitch - dy * DRAG_RAD_PER_VP);
+    const dt = (now - this.panLastTs) / 1000;
+    if (dt > 0.001) {
+      this.yawSpeed = (this.yaw - prevYaw) / dt;
+      this.noteYawSign(this.yawSpeed);
+    }
+    this.panLastX = event.offsetX;
+    this.panLastY = event.offsetY;
+    this.panLastTs = now;
+    this.applyCamera();
+  }
+
+  private onSpherePanEnd(event: GestureEvent): void {
+    this.lastPanEndMs = Date.now();
+    if (isTapGesture(event.offsetX, event.offsetY)) {
+      this.dragging = false;
+      this.coasting = false;
+      const sign = this.yawSign < 0 ? -1 : 1;
+      this.yawSpeed = sign * AUTO_ROTATE_YAW_SPEED;
+      this.pickAt(this.panStartX, this.panStartY);
+      return;
+    }
+    const flick = -event.velocityX * DRAG_RAD_PER_VP;
+    if (Math.abs(flick) > Math.abs(this.yawSpeed)) {
+      this.yawSpeed = flick;
+    }
+    this.noteYawSign(this.yawSpeed);
+    this.coasting = true;
+    this.dragging = true;
+  }
+
+  private onSphereClick(event: ClickEvent): void {
+    if (Date.now() - this.lastPanEndMs < 400) {
+      return;
+    }
+    this.pickAt(event.x, event.y);
+  }
+
+  private deviceKeyFromHit(node: Node): string {
+    let current: Node | null = node;
+    let depth = 0;
+    while (current != null && depth < 4) {
+      if (this.pointNodes.has(current.name)) {
+        return current.name;
+      }
+      if (current.name === SHELL_NAME) {
+        return '';
+      }
+      current = current.parent;
+      depth++;
+    }
+    return '';
+  }
+
+  private async pickAt(x: number, y: number): Promise<void> {
+    const camera = this.cameraRef;
+    const scene = this.sceneRef;
+    if (camera == null || scene == null || scene.root == null || this.sceneFailed) {
+      return;
+    }
+    const serial = this.pickSerial + 1;
+    this.pickSerial = serial;
+    const ndc = localToNdc(x, y, this.canvasSize, this.canvasSize);
+    const view: Vec2 = { x: ndc.x, y: ndc.y };
+    let hits: RaycastResult[] = [];
+    try {
+      hits = await camera.raycast(view, { rootNode: scene.root });
+    } catch (_err) {
+      console.error('InventoryDiscoveryRadar raycast failed');
+      return;
+    }
+    if (serial !== this.pickSerial || this.disposed) {
+      return;
+    }
+    for (let i = 0; i < hits.length; i++) {
+      const key = this.deviceKeyFromHit(hits[i].node);
+      if (key.length > 0) {
+        this.selectedDeviceKey = key;
+        return;
+      }
+    }
+  }
+
+  private sceneOptions(): SceneOptions {
+    if (this.sceneOpt != null) {
+      return this.sceneOpt;
+    }
+    const empty: SceneOptions = { modelType: ModelType.SURFACE };
+    return empty;
+  }
+
   @Builder
   centerHubOverlay() {
     Stack({ alignContent: Alignment.Center }) {
@@ -428,7 +1024,35 @@ export struct InventoryDiscoveryRadar {
     .hitTestBehavior(HitTestMode.None)
   }
 
-  build() {
+  @Builder
+  sphereBranch() {
+    Stack({ alignContent: Alignment.Center }) {
+      Component3D(this.sceneOptions())
+        .width(this.canvasSize)
+        .height(this.canvasSize)
+    }
+    .width(this.canvasSize)
+    .height(this.canvasSize)
+    .hitTestBehavior(HitTestMode.Default)
+    .gesture(
+      PanGesture({ fingers: 1, direction: PanDirection.All, distance: 1 })
+        .onActionStart((event: GestureEvent) => {
+          this.onSpherePanStart(event);
+        })
+        .onActionUpdate((event: GestureEvent) => {
+          this.onSpherePanUpdate(event);
+        })
+        .onActionEnd((event: GestureEvent) => {
+          this.onSpherePanEnd(event);
+        })
+    )
+    .onClick((event: ClickEvent) => {
+      this.onSphereClick(event);
+    })
+  }
+
+  @Builder
+  canvasBranch() {
     Stack({ alignContent: Alignment.Center }) {
       Canvas(this.ctx)
         .width(this.canvasSize)
@@ -456,5 +1080,13 @@ export struct InventoryDiscoveryRadar {
     .onClick((event: ClickEvent) => {
       this.handleTapAt(event.x, event.y);
     })
+  }
+
+  build() {
+    if (this.sceneReady && this.sceneOpt != null && !this.sceneFailed) {
+      this.sphereBranch()
+    } else {
+      this.canvasBranch()
+    }
   }
 }

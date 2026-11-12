@@ -134,6 +134,12 @@ const radarSource = readFileSync(
   'utf8'
 );
 ok('canvas fallback skips hub links', !radarSource.includes('this.drawHubLinks('));
+ok(
+  'inventory radar hosts Component3D',
+  radarSource.includes('Component3D(') &&
+    radarSource.includes('Scene.load') &&
+    radarSource.includes('raycast')
+);
 
 console.log('---');
 console.log(failed === 0 ? 'All local layout checks passed.' : `${failed} check(s) failed.`);
