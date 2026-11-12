@@ -2,6 +2,7 @@ import {
   Blend,
   Camera,
   Color,
+  CullMode,
   EnvironmentBackgroundType,
   Geometry,
   Light,
@@ -10,6 +11,7 @@ import {
   Node,
   Quaternion,
   RaycastResult,
+  RenderSort,
   RenderingPipelineType,
   Scene,
   SceneResourceFactory,
@@ -75,7 +77,9 @@ const POINT_RADIUS: number = 0.045;
 const SELECTED_POINT_RADIUS: number = 0.06;
 const DRAG_RAD_PER_VP: number = 0.006;
 const SHELL_NAME: string = 'inventoryShell';
-const SHELL_ALPHA: number = 0.16;
+const SHELL_RADIUS: number = SPHERE_RADIUS * 1.02;
+const SHELL_ALPHA: number = 0.04;
+const SHELL_SORT_LAYER: number = 48;
 const PRIMARY_G: number = 102 / 255;
 const PRIMARY_B: number = 204 / 255;
 const LAN_G: number = 143 / 255;
@@ -531,7 +535,7 @@ export struct InventoryDiscoveryRadar {
       camera.nearPlane = 0.05;
       camera.farPlane = 30;
       camera.renderingPipeline = RenderingPipelineType.FORWARD;
-      const clear: Color = { r: 1, g: 1, b: 1, a: 1 };
+      const clear: Color = { r: 0, g: 0, b: 0, a: 0 };
       camera.clearColor = clear;
       this.attachToRoot(root, camera);
 
@@ -610,15 +614,18 @@ export struct InventoryDiscoveryRadar {
     }
   }
 
-  /** 通透外缘：低透明 PRIMARY，不画经线，也不在 3D 路径放中心「近」。 */
+  /** 外缘淡光：略大于设备球、极低 alpha、双面、透明层后画。无经线，3D 路径不放中心「近」。 */
   private async createShell(factory: SceneResourceFactory, root: Node): Promise<void> {
     const def = new SphereGeometry();
-    def.radius = SPHERE_RADIUS;
+    def.radius = SHELL_RADIUS;
     def.segmentCount = 32;
     const mesh = await factory.createMesh({ name: 'inventoryShellMesh' }, def);
     const geom = await factory.createGeometry({ name: SHELL_NAME }, mesh);
     geom.name = SHELL_NAME;
     const mat = await this.createUnlit(factory, 'inventoryShellMat', 0, PRIMARY_G, PRIMARY_B, SHELL_ALPHA, true);
+    mat.cullMode = CullMode.NONE;
+    const sort: RenderSort = { renderSortLayer: SHELL_SORT_LAYER, renderSortLayerOrder: 0 };
+    mat.renderSort = sort;
     this.paintGeometry(geom, mat);
     this.attachToRoot(root, geom);
   }
@@ -1030,6 +1037,7 @@ export struct InventoryDiscoveryRadar {
       Component3D(this.sceneOptions())
         .width(this.canvasSize)
         .height(this.canvasSize)
+        .backgroundColor('#00000000')
     }
     .width(this.canvasSize)
     .height(this.canvasSize)
