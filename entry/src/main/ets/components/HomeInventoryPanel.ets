@@ -1,4 +1,5 @@
 import { AppleTheme } from '../common/AppleTheme';
+import { selectionKeyIfStillPresent } from '../common/InventoryDeviceMerge';
 import { computeDevicePickerListMaxHeightVp } from '../common/DevicePickerSheetLayout';
 import {
   computeRadarCanvasSize,
@@ -56,20 +57,7 @@ export struct HomeInventoryPanel {
   }
 
   private syncSelection(): void {
-    if (this.devices.length === 0) {
-      this.selectedDeviceKey = '';
-      return;
-    }
-    let found = false;
-    for (let i = 0; i < this.devices.length; i++) {
-      if (this.devices[i].deviceKey === this.selectedDeviceKey) {
-        found = true;
-        break;
-      }
-    }
-    if (!found) {
-      this.selectedDeviceKey = '';
-    }
+    this.selectedDeviceKey = selectionKeyIfStillPresent(this.selectedDeviceKey, this.devices);
   }
 
   private selectedDevice(): HomeInventoryDevice {

@@ -7,6 +7,7 @@ import radarOrbitGeometryTest from './RadarOrbitGeometry.test';
 import devicePickerSheetLayoutTest from './DevicePickerSheetLayout.test';
 import agcAuditLayoutTest from './AgcAuditLayout.test';
 import sphereCameraMathTest from './SphereCameraMath.test';
+import inventoryDeviceMergeTest from './InventoryDeviceMerge.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -15,6 +16,7 @@ export default function testsuite() {
   radarLayoutHelperTest();
   radarDeviceLayoutTest();
   sphereCameraMathTest();
+  inventoryDeviceMergeTest();
   radarOrbitGeometryTest();
   devicePickerSheetLayoutTest();
   deviceEnvironmentTest();

@@ -9,36 +9,42 @@ import {
   MaterialType,
   Node,
   Quaternion,
-  RaycastResult,
   RenderingPipelineType,
   Scene,
   SceneResourceFactory,
   SphereGeometry,
   UnlitMaterial,
-  Vec2,
   Vec4
 } from '@kit.ArkGraphics3D';
 import { AppleTheme } from '../common/AppleTheme';
 import {
-  deviceSpherePointForKey,
   deviceSpherePointForStableKey,
+  goldenSpherePoint,
   ripplePhaseOffset,
-  SPHERE_RADIUS
+  SPHERE_RADIUS,
+  Vec3
 } from '../common/RadarDeviceLayout';
 import {
-  canvasLayoutScale,
-  clampDeviceOrbitLayout,
-  minOrbitRadiusLayoutVp
+  canvasLayoutScale
 } from '../common/RadarOrbitGeometry';
 import {
+  applyOrbitPan,
   AUTO_ROTATE_YAW_SPEED,
+  CAMERA_FOV_RAD,
   clampOrbitPitch,
+  clampOrbitSpeed,
+  decayOrbitSpeed,
   isTapGesture,
-  localToNdc,
-  ORBIT_RADIUS,
   orbitEye,
+  orbitSensitivity,
+  pickNearestFrontKey,
+  pointFacingAlpha,
+  pointFacingScale,
+  SELECTED_POINT_SCALE_BOOST,
   shouldResumeAutoRotate,
-  TAP_SLOP_VP
+  sphereFacing,
+  TAP_SLOP_VP,
+  worldToCanvas
 } from '../common/SphereCameraMath';
 import {
   HomeInventoryDevice,
@@ -59,35 +65,18 @@ interface DeviceDrawItem {
   fade: number;
 }
 
-interface MotionAngles {
-  rotY: number;
-  rotX: number;
-}
-
-interface OrbitDrawMetrics {
-  layoutToDraw: number;
-  cxLayout: number;
-  cyLayout: number;
-}
-
 const DEFAULT_CANVAS_SIZE: number = 280;
 const FRAME_MS: number = 50;
 const HIT_RADIUS: number = 26;
 const POINT_RADIUS: number = 0.045;
-const SELECTED_POINT_RADIUS: number = 0.06;
-const DRAG_RAD_PER_VP: number = 0.006;
-const CAMERA_FOV_RAD: number = 50 * Math.PI / 180;
-/** 仅用于射线跳过；屏幕光环不是网格，避免外壳抢走设备拾取。 */
-const SHELL_NAME: string = 'inventoryShell';
-const RIM_SPHERE_RADIUS: number = SPHERE_RADIUS * 1.02;
+const FIELD_POINT_RADIUS: number = 0.016;
+const FIELD_COUNT: number = 96;
+const FIELD_PREFIX: string = 'fieldDot:';
 const PRIMARY_G: number = 102 / 255;
 const PRIMARY_B: number = 204 / 255;
 const LAN_G: number = 143 / 255;
 const LAN_B: number = 200 / 255;
 const RIPPLE_PERIOD: number = 3.2;
-const HUB_DIAMETER_BASE: number = 34;
-const HUB_FONT_BASE: number = 11;
-const IDLE_HUB_RIPPLE_ID: string = '__idle_hub__';
 
 @Component
 export struct InventoryDiscoveryRadar {
@@ -97,6 +86,10 @@ export struct InventoryDiscoveryRadar {
   @Prop @Watch('onCanvasSizeChanged') canvasSize: number = DEFAULT_CANVAS_SIZE;
   @State sceneReady: boolean = false;
   @State sceneFailed: boolean = false;
+  @State selectedRingX: number = 0;
+  @State selectedRingY: number = 0;
+  @State selectedRingSize: number = 18;
+  @State selectedRingVisible: boolean = false;
   private sceneOpt: SceneOptions | null = null;
   private sceneRef: Scene | null = null;
   private cameraRef: Camera | null = null;
@@ -105,6 +98,7 @@ export struct InventoryDiscoveryRadar {
   private yaw: number = 0;
   private pitch: number = 0.18;
   private yawSpeed: number = AUTO_ROTATE_YAW_SPEED;
+  private pitchSpeed: number = 0;
   private dragging: boolean = false;
   private panStartX: number = 0;
   private panStartY: number = 0;
@@ -123,10 +117,11 @@ export struct InventoryDiscoveryRadar {
   private orbitTimerId: number = -1;
   private lastOrbitMs: number = 0;
   private frameRenderBroken: boolean = false;
-  private pickSerial: number = 0;
   private lastPanEndMs: number = 0;
-  private bleMat: UnlitMaterial | null = null;
-  private lanMat: UnlitMaterial | null = null;
+  private pointMats: Map<string, UnlitMaterial> = new Map();
+  private pointKinds: Map<string, InventoryDeviceKind> = new Map();
+  private fieldNodes: Geometry[] = [];
+  private fieldMats: UnlitMaterial[] = [];
   private settings: RenderingContextSettings = new RenderingContextSettings(true);
   private ctx: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
   private tickTimerId: number = -1;
@@ -137,7 +132,6 @@ export struct InventoryDiscoveryRadar {
   private drawWidth: number = DEFAULT_CANVAS_SIZE;
   private drawHeight: number = DEFAULT_CANVAS_SIZE;
   private deviceFirstSeenMs: Map<string, number> = new Map();
-  private lastProjectedDevices: DeviceDrawItem[] = [];
 
   aboutToAppear(): void {
     this.disposed = false;
@@ -153,6 +147,7 @@ export struct InventoryDiscoveryRadar {
     }
     if (this.sceneReady && !this.sceneFailed) {
       this.applyCamera();
+      this.refreshPointAppearances();
       return;
     }
     this.syncCanvasMetrics();
@@ -179,7 +174,8 @@ export struct InventoryDiscoveryRadar {
   }
 
   onSelectedChanged(): void {
-    this.refreshPointScales();
+    this.refreshPointAppearances();
+    this.renderOrbitFrame();
   }
 
   onDevicesChanged(): void {
@@ -213,6 +209,10 @@ export struct InventoryDiscoveryRadar {
     this.cameraRef = null;
     this.factoryRef = null;
     this.pointNodes.clear();
+    this.pointMats.clear();
+    this.pointKinds.clear();
+    this.fieldNodes = [];
+    this.fieldMats = [];
     if (scene != null) {
       scene.destroy();
     }
@@ -245,37 +245,6 @@ export struct InventoryDiscoveryRadar {
     return (layoutSize / 2) * (this.drawHeight / layoutSize);
   }
 
-  private hubLayoutDiameter(): number {
-    return HUB_DIAMETER_BASE * (this.canvasSize / DEFAULT_CANVAS_SIZE);
-  }
-
-  private hubLayoutFontSize(): number {
-    return Math.max(AppleTheme.HUB_LABEL_MIN_FONT,
-      HUB_FONT_BASE * (this.canvasSize / DEFAULT_CANVAS_SIZE));
-  }
-
-  /** 相机看向原点时，球体外缘在正方形画布上的投影直径。 */
-  private rimLayoutDiameter(): number {
-    const dist = ORBIT_RADIUS;
-    if (dist <= RIM_SPHERE_RADIUS) {
-      return this.canvasSize;
-    }
-    const halfFov = CAMERA_FOV_RAD * 0.5;
-    const tanHalf = Math.tan(halfFov);
-    if (tanHalf <= 0.0001) {
-      return this.canvasSize;
-    }
-    const angular = Math.asin(RIM_SPHERE_RADIUS / dist);
-    let diameter = this.canvasSize * (Math.tan(angular) / tanHalf);
-    if (diameter < 1) {
-      diameter = 1;
-    }
-    if (diameter > this.canvasSize) {
-      diameter = this.canvasSize;
-    }
-    return diameter;
-  }
-
   private layoutToDrawScale(): number {
     const layout = Math.max(this.canvasSize, 1);
     const draw = this.drawWidth > 0 ? this.drawWidth : layout;
@@ -284,43 +253,6 @@ export struct InventoryDiscoveryRadar {
 
   private canvasLayoutScaleFactor(): number {
     return canvasLayoutScale(this.canvasSize, DEFAULT_CANVAS_SIZE);
-  }
-
-  private orbitDrawMetrics(): OrbitDrawMetrics {
-    const layoutToDraw = this.layoutToDrawScale();
-    return {
-      layoutToDraw: layoutToDraw,
-      cxLayout: this.canvasSize / 2,
-      cyLayout: this.canvasSize / 2
-    };
-  }
-
-  private layoutPointToDraw(sxLayout: number, syLayout: number, metrics: OrbitDrawMetrics, cx: number,
-    cy: number): ProjectedPoint {
-    const ox = (sxLayout - metrics.cxLayout) * metrics.layoutToDraw;
-    const oy = (syLayout - metrics.cyLayout) * metrics.layoutToDraw;
-    return { sx: cx + ox, sy: cy + oy, z: 0 };
-  }
-
-  private drawPointToLayout(sxDraw: number, syDraw: number, metrics: OrbitDrawMetrics, cx: number,
-    cy: number): ProjectedPoint {
-    const ox = (sxDraw - cx) / metrics.layoutToDraw;
-    const oy = (syDraw - cy) / metrics.layoutToDraw;
-    return {
-      sx: metrics.cxLayout + ox,
-      sy: metrics.cyLayout + oy,
-      z: 0
-    };
-  }
-
-  /** 非匀速「摆动」视角，替代单一匀速绕圈 */
-  private motionAngles(elapsed: number): MotionAngles {
-    const rotY = Math.sin(elapsed * 0.38) * 0.78 +
-      Math.sin(elapsed * 0.16 + 0.9) * 0.34 +
-      Math.cos(elapsed * 0.24) * 0.12;
-    const rotX = 0.34 + Math.sin(elapsed * 0.21) * 0.11 + Math.cos(elapsed * 0.37 + 0.5) * 0.07;
-    const angles: MotionAngles = { rotY: rotY, rotX: rotX };
-    return angles;
   }
 
   private rgbForDevice(device: HomeInventoryDevice): string {
@@ -343,33 +275,33 @@ export struct InventoryDiscoveryRadar {
     }
     this.stopTick();
     this.syncCanvasMetrics();
+    this.lastOrbitMs = Date.now();
     this.drawFrame();
     this.tickTimerId = setInterval(() => {
       if (this.disposed || !this.active) {
         return;
       }
+      const now = Date.now();
+      let dt = (now - this.lastOrbitMs) / 1000;
+      this.lastOrbitMs = now;
+      if (dt < 0) {
+        dt = 0;
+      } else if (dt > 0.1) {
+        dt = 0.1;
+      }
+      this.stepOrbit(dt);
       this.drawFrame();
     }, FRAME_MS) as number;
   }
 
-  private project(x: number, y: number, z: number, rotY: number, rotX: number, cx: number,
-    cy: number): ProjectedPoint {
-    let xr = x * Math.cos(rotY) - z * Math.sin(rotY);
-    let zr = x * Math.sin(rotY) + z * Math.cos(rotY);
-    let yr = y;
-    let y2 = yr * Math.cos(rotX) - zr * Math.sin(rotX);
-    let z2 = yr * Math.sin(rotX) + zr * Math.cos(rotX);
-    const perspective = 300 / (300 + z2 * 130);
-    const sphereScale = this.layoutScale();
-    return {
-      sx: cx + xr * 98 * sphereScale * perspective,
-      sy: cy + y2 * 98 * sphereScale * perspective,
-      z: z2
-    };
-  }
-
-  private depthFade(z: number): number {
-    return Math.max(0.42, Math.min(1, 0.58 + z * 0.42));
+  private facingDepth(facing: number): number {
+    let t = (facing + 1) * 0.5;
+    if (t < 0) {
+      t = 0;
+    } else if (t > 1) {
+      t = 1;
+    }
+    return t;
   }
 
   private fadeInForDevice(deviceKey: string): number {
@@ -399,12 +331,12 @@ export struct InventoryDiscoveryRadar {
 
   private drawDevicePoint(ctx: CanvasRenderingContext2D, item: DeviceDrawItem, elapsed: number,
     selected: boolean): void {
-    const depth = this.depthFade(item.z);
+    const depth = this.facingDepth(item.z);
     const fade = item.fade * depth;
     const sx = item.sx;
     const sy = item.sy;
     const scale = this.layoutScale();
-    const coreR = (selected ? 7.5 : 6) * scale;
+    const coreR = (selected ? 7.5 : 6) * scale * (0.38 + 0.74 * depth);
     const rgb = this.rgbForDevice(item.device);
     const fillColor = item.device.kind === InventoryDeviceKind.Lan ? AppleTheme.LAN_ACCENT : AppleTheme.PRIMARY;
 
@@ -424,46 +356,71 @@ export struct InventoryDiscoveryRadar {
 
     if (selected) {
       ctx.beginPath();
-      ctx.arc(sx, sy, coreR + 9 * scale, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(${rgb}, ${0.5 * fade})`;
-      ctx.lineWidth = 2;
+      ctx.arc(sx, sy, coreR + 5 * scale, 0, Math.PI * 2);
+      ctx.strokeStyle = AppleTheme.PRIMARY;
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.9;
       ctx.stroke();
+      ctx.globalAlpha = 1;
     }
   }
 
-  private collectDeviceDrawItems(rotY: number, rotX: number, cx: number, cy: number,
-    elapsed: number, metrics: OrbitDrawMetrics): DeviceDrawItem[] {
+  private collectDeviceDrawItems(cx: number, cy: number): DeviceDrawItem[] {
     const items: DeviceDrawItem[] = [];
-    const hubD = this.hubLayoutDiameter();
-    const minOrbitLayout = minOrbitRadiusLayoutVp(hubD, this.canvasLayoutScaleFactor());
+    const eye = orbitEye(this.yaw, this.pitch);
+    const layout = Math.max(this.canvasSize, 1);
+    const toDraw = this.layoutToDrawScale();
     for (let i = 0; i < this.devices.length; i++) {
       const dev = this.devices[i];
-      const v = deviceSpherePointForKey(dev.deviceKey);
-      const p = this.project(v.x, v.y, v.z, rotY, rotX, cx, cy);
-      const phase = ripplePhaseOffset(dev.deviceKey) * Math.PI * 2;
-      const wobble = this.layoutScale();
-      const rawSx = p.sx + Math.sin(elapsed * 0.85 + phase) * 3 * wobble;
-      const rawSy = p.sy + Math.cos(elapsed * 0.62 + phase * 1.2) * 2.2 * wobble;
-      const rawLayout = this.drawPointToLayout(rawSx, rawSy, metrics, cx, cy);
-      const clampedLayout = clampDeviceOrbitLayout(
-        rawLayout.sx,
-        rawLayout.sy,
-        metrics.cxLayout,
-        metrics.cyLayout,
-        minOrbitLayout,
-        phase
-      );
-      const drawPos = this.layoutPointToDraw(clampedLayout.x, clampedLayout.y, metrics, cx, cy);
+      const v = deviceSpherePointForStableKey(dev.deviceKey);
+      const facing = sphereFacing(v, eye);
+      const proj = worldToCanvas(v, eye, CAMERA_FOV_RAD, layout);
+      if (proj.z >= 0) {
+        continue;
+      }
       items.push({
         device: dev,
-        sx: drawPos.sx,
-        sy: drawPos.sy,
-        z: p.z,
+        sx: cx + (proj.x - layout * 0.5) * toDraw,
+        sy: cy + (proj.y - layout * 0.5) * toDraw,
+        z: facing,
         fade: this.fadeInForDevice(dev.deviceKey)
       });
     }
     items.sort((a, b) => a.z - b.z);
     return items;
+  }
+
+  private collectFieldDrawItems(cx: number, cy: number): ProjectedPoint[] {
+    const items: ProjectedPoint[] = [];
+    const eye = orbitEye(this.yaw, this.pitch);
+    const layout = Math.max(this.canvasSize, 1);
+    const toDraw = this.layoutToDrawScale();
+    for (let i = 0; i < FIELD_COUNT; i++) {
+      const v = goldenSpherePoint(i, FIELD_COUNT, SPHERE_RADIUS);
+      const facing = sphereFacing(v, eye);
+      const proj = worldToCanvas(v, eye, CAMERA_FOV_RAD, layout);
+      if (proj.z >= 0) {
+        continue;
+      }
+      items.push({
+        sx: cx + (proj.x - layout * 0.5) * toDraw,
+        sy: cy + (proj.y - layout * 0.5) * toDraw,
+        z: facing
+      });
+    }
+    items.sort((a, b) => a.z - b.z);
+    return items;
+  }
+
+  private drawFieldPoint(ctx: CanvasRenderingContext2D, item: ProjectedPoint): void {
+    const depth = this.facingDepth(item.z);
+    const scale = this.layoutScale();
+    const r = 1.7 * scale * (0.38 + 0.62 * depth);
+    const alpha = 0.1 + 0.28 * depth;
+    ctx.beginPath();
+    ctx.arc(item.sx, item.sy, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${AppleTheme.PRIMARY_RGB}, ${alpha})`;
+    ctx.fill();
   }
 
   private drawFrame(): void {
@@ -474,59 +431,36 @@ export struct InventoryDiscoveryRadar {
     const cx = this.centerDrawX();
     const cy = this.centerDrawY();
     const elapsed = (Date.now() - this.startMs) / 1000;
-    const motion = this.motionAngles(elapsed);
-    const rotY = motion.rotY;
-    const rotX = motion.rotX;
 
     ctx.clearRect(0, 0, w, h);
 
-    const orbitMetrics = this.orbitDrawMetrics();
-    const deviceItems = this.collectDeviceDrawItems(rotY, rotX, cx, cy, elapsed, orbitMetrics);
-    this.lastProjectedDevices = deviceItems;
+    const fieldItems = this.collectFieldDrawItems(cx, cy);
+    for (let i = 0; i < fieldItems.length; i++) {
+      this.drawFieldPoint(ctx, fieldItems[i]);
+    }
+
+    const deviceItems = this.collectDeviceDrawItems(cx, cy);
 
     for (let i = 0; i < deviceItems.length; i++) {
       const item = deviceItems[i];
       const selected = item.device.deviceKey === this.selectedDeviceKey;
       this.drawDevicePoint(ctx, item, elapsed, selected);
     }
-
-    if (this.devices.length === 0) {
-      this.drawRipples(ctx, cx, cy, elapsed, IDLE_HUB_RIPPLE_ID, 1, true, 1, AppleTheme.PRIMARY_RGB);
-      this.drawRipples(ctx, cx, cy, elapsed + 0.4, IDLE_HUB_RIPPLE_ID + '_lan', 1, false, 1, AppleTheme.LAN_RGB);
-    }
-  }
-
-  private mapClickToDrawSpace(x: number, y: number): ProjectedPoint {
-    const layoutW = this.canvasSize;
-    const layoutH = this.canvasSize;
-    if (layoutW <= 0 || layoutH <= 0) {
-      return { sx: x, sy: y, z: 0 };
-    }
-    return {
-      sx: x * (this.drawWidth / layoutW),
-      sy: y * (this.drawHeight / layoutH),
-      z: 0
-    };
   }
 
   private handleTapAt(x: number, y: number): void {
-    const mapped = this.mapClickToDrawSpace(x, y);
-    let bestKey = '';
-    const hitR = HIT_RADIUS * this.layoutScale();
-    let bestDist = hitR * hitR;
-    for (let i = 0; i < this.lastProjectedDevices.length; i++) {
-      const item = this.lastProjectedDevices[i];
-      const dx = mapped.sx - item.sx;
-      const dy = mapped.sy - item.sy;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < bestDist) {
-        bestDist = d2;
-        bestKey = item.device.deviceKey;
-      }
+    const key = this.pickFrontDeviceAt(x, y);
+    if (key.length > 0) {
+      this.selectedDeviceKey = key;
     }
-    if (bestKey.length > 0) {
-      this.selectedDeviceKey = bestKey;
+  }
+
+  private pickFrontDeviceAt(x: number, y: number): string {
+    const keys: string[] = [];
+    for (let i = 0; i < this.devices.length; i++) {
+      keys.push(this.devices[i].deviceKey);
     }
+    return pickNearestFrontKey(keys, x, y, this.yaw, this.pitch, this.canvasSize, HIT_RADIUS);
   }
 
   private markSceneFailed(): void {
@@ -543,12 +477,15 @@ export struct InventoryDiscoveryRadar {
     this.sceneRef = null;
     this.cameraRef = null;
     this.factoryRef = null;
-    this.bleMat = null;
-    this.lanMat = null;
     this.sceneOpt = null;
     this.sceneReady = false;
     this.sceneBooted = false;
     this.pointNodes.clear();
+    this.pointMats.clear();
+    this.pointKinds.clear();
+    this.fieldNodes = [];
+    this.fieldMats = [];
+    this.selectedRingVisible = false;
     const target: Scene | null = held != null ? held : scene;
     if (target != null) {
       try {
@@ -596,13 +533,16 @@ export struct InventoryDiscoveryRadar {
       this.attachToRoot(root, light);
 
       this.clearSceneBackground(scene);
-      this.bleMat = await this.createUnlit(factory, 'blePointMat', 0, PRIMARY_G, PRIMARY_B, 1, false);
-      this.lanMat = await this.createUnlit(factory, 'lanPointMat', 0, LAN_G, LAN_B, 1, false);
 
       this.factoryRef = factory;
       this.sceneRef = scene;
       this.cameraRef = camera;
       this.applyCamera();
+      await this.createFieldCloud(factory, root);
+      if (this.disposed) {
+        this.releaseBootScene(scene);
+        return;
+      }
       this.sceneBooted = true;
       this.enqueuePointSync();
       await this.pointSyncTail;
@@ -709,9 +649,11 @@ export struct InventoryDiscoveryRadar {
       const key = stale[i];
       const node = this.pointNodes.get(key);
       if (node != null) {
-        this.dropNode(node);
+        this.dropNode(node, key);
       }
       this.pointNodes.delete(key);
+      this.pointMats.delete(key);
+      this.pointKinds.delete(key);
     }
     for (let i = 0; i < this.devices.length; i++) {
       const dev = this.devices[i];
@@ -722,7 +664,8 @@ export struct InventoryDiscoveryRadar {
       if (existing != null) {
         existing.visible = true;
         existing.name = dev.deviceKey;
-        this.applyPointScale(existing, dev.deviceKey);
+        this.pointKinds.set(dev.deviceKey, dev.kind);
+        this.applyPointAppearance(existing, dev.deviceKey);
         continue;
       }
       await this.createPoint(factory, root, dev);
@@ -738,29 +681,160 @@ export struct InventoryDiscoveryRadar {
     geom.name = device.deviceKey;
     const p = deviceSpherePointForStableKey(device.deviceKey);
     geom.position = { x: p.x, y: p.y, z: p.z };
-    const mat = device.kind === InventoryDeviceKind.Lan ? this.lanMat : this.bleMat;
-    if (mat != null) {
-      this.paintGeometry(geom, mat);
-    }
-    this.applyPointScale(geom, device.deviceKey);
+    const isLan = device.kind === InventoryDeviceKind.Lan;
+    const mat = await this.createUnlit(
+      factory,
+      `pointMat:${device.deviceKey}`,
+      0,
+      isLan ? LAN_G : PRIMARY_G,
+      isLan ? LAN_B : PRIMARY_B,
+      1,
+      true
+    );
+    this.paintGeometry(geom, mat);
+    this.pointMats.set(device.deviceKey, mat);
+    this.pointKinds.set(device.deviceKey, device.kind);
+    this.applyPointAppearance(geom, device.deviceKey);
     geom.visible = true;
     this.attachToRoot(root, geom);
     this.pointNodes.set(device.deviceKey, geom);
   }
 
-  private applyPointScale(node: Geometry, deviceKey: string): void {
+  private applyPointAppearance(node: Geometry, deviceKey: string): void {
+    const pos = deviceSpherePointForStableKey(deviceKey);
+    const facing = sphereFacing(pos, orbitEye(this.yaw, this.pitch));
     const selected = deviceKey.length > 0 && deviceKey === this.selectedDeviceKey;
-    const s = selected ? (SELECTED_POINT_RADIUS / POINT_RADIUS) : 1;
+    let s = pointFacingScale(facing);
+    if (selected) {
+      s = s * SELECTED_POINT_SCALE_BOOST;
+    }
     node.scale = { x: s, y: s, z: s };
+    const mat = this.pointMats.get(deviceKey);
+    if (mat == null) {
+      return;
+    }
+    const kind = this.pointKinds.get(deviceKey);
+    const isLan = kind === InventoryDeviceKind.Lan;
+    let t = (facing + 1) * 0.5;
+    if (t < 0) {
+      t = 0;
+    } else if (t > 1) {
+      t = 1;
+    }
+    const dim = 0.32 + 0.68 * t;
+    let a = pointFacingAlpha(facing);
+    if (selected) {
+      a = Math.max(a, 0.82);
+    }
+    const factor: Vec4 = {
+      x: isLan ? 0 : 0,
+      y: (isLan ? LAN_G : PRIMARY_G) * dim,
+      z: (isLan ? LAN_B : PRIMARY_B) * dim,
+      w: a
+    };
+    mat.baseColor.factor = factor;
   }
 
-  private refreshPointScales(): void {
+  private refreshPointAppearances(): void {
     this.pointNodes.forEach((geom: Geometry, key: string) => {
-      this.applyPointScale(geom, key);
+      this.applyPointAppearance(geom, key);
     });
+    this.refreshFieldAppearances();
+    this.updateSelectedRing();
   }
 
-  private dropNode(node: Geometry): void {
+  private async createFieldCloud(factory: SceneResourceFactory, root: Node): Promise<void> {
+    for (let i = 0; i < FIELD_COUNT; i++) {
+      if (this.disposed) {
+        return;
+      }
+      await this.createFieldDot(factory, root, i);
+    }
+    this.refreshFieldAppearances();
+  }
+
+  private async createFieldDot(factory: SceneResourceFactory, root: Node, index: number): Promise<void> {
+    const def = new SphereGeometry();
+    def.radius = FIELD_POINT_RADIUS;
+    def.segmentCount = 8;
+    const mesh = await factory.createMesh({ name: `fieldMesh:${index}` }, def);
+    const geom = await factory.createGeometry({ name: `${FIELD_PREFIX}${index}` }, mesh);
+    geom.name = `${FIELD_PREFIX}${index}`;
+    const p = goldenSpherePoint(index, FIELD_COUNT, SPHERE_RADIUS);
+    geom.position = { x: p.x, y: p.y, z: p.z };
+    const mat = await this.createUnlit(
+      factory,
+      `fieldMat:${index}`,
+      0,
+      PRIMARY_G,
+      PRIMARY_B,
+      0.3,
+      true
+    );
+    this.paintGeometry(geom, mat);
+    this.applyFieldAppearance(geom, mat, p);
+    geom.visible = true;
+    this.attachToRoot(root, geom);
+    this.fieldNodes.push(geom);
+    this.fieldMats.push(mat);
+  }
+
+  private applyFieldAppearance(node: Geometry, mat: UnlitMaterial, pos: Vec3): void {
+    const facing = sphereFacing(pos, orbitEye(this.yaw, this.pitch));
+    const s = pointFacingScale(facing) * 0.55;
+    node.scale = { x: s, y: s, z: s };
+    let t = (facing + 1) * 0.5;
+    if (t < 0) {
+      t = 0;
+    } else if (t > 1) {
+      t = 1;
+    }
+    const dim = 0.28 + 0.55 * t;
+    const a = pointFacingAlpha(facing) * 0.42;
+    const factor: Vec4 = {
+      x: 0,
+      y: PRIMARY_G * dim,
+      z: PRIMARY_B * dim,
+      w: a
+    };
+    mat.baseColor.factor = factor;
+  }
+
+  private refreshFieldAppearances(): void {
+    const n = this.fieldNodes.length;
+    for (let i = 0; i < n; i++) {
+      const geom = this.fieldNodes[i];
+      const mat = this.fieldMats[i];
+      if (geom == null || mat == null) {
+        continue;
+      }
+      const p = goldenSpherePoint(i, FIELD_COUNT, SPHERE_RADIUS);
+      this.applyFieldAppearance(geom, mat, p);
+    }
+  }
+
+  private updateSelectedRing(): void {
+    const key = this.selectedDeviceKey;
+    if (key.length === 0 || !this.pointNodes.has(key) || this.canvasSize <= 0) {
+      this.selectedRingVisible = false;
+      return;
+    }
+    const p = deviceSpherePointForStableKey(key);
+    const eye = orbitEye(this.yaw, this.pitch);
+    const facing = sphereFacing(p, eye);
+    const proj = worldToCanvas(p, eye, CAMERA_FOV_RAD, this.canvasSize);
+    if (proj.z >= 0 || facing <= 0) {
+      this.selectedRingVisible = false;
+      return;
+    }
+    const size = 14 + 16 * pointFacingScale(facing);
+    this.selectedRingX = proj.x;
+    this.selectedRingY = proj.y;
+    this.selectedRingSize = size;
+    this.selectedRingVisible = true;
+  }
+
+  private dropNode(node: Geometry, deviceKey: string): void {
     try {
       node.visible = false;
       const parent = node.parent;
@@ -769,6 +843,13 @@ export struct InventoryDiscoveryRadar {
       }
       node.destroy();
     } catch (_err) {
+    }
+    const mat = this.pointMats.get(deviceKey);
+    if (mat != null) {
+      try {
+        mat.destroy();
+      } catch (_err) {
+      }
     }
   }
 
@@ -874,20 +955,28 @@ export struct InventoryDiscoveryRadar {
     } else if (dt > 0.1) {
       dt = 0.1;
     }
+    this.stepOrbit(dt);
+    this.applyCamera();
+    this.refreshPointAppearances();
+    this.renderOrbitFrame();
+  }
+
+  private stepOrbit(dt: number): void {
     if (this.coasting) {
       this.yaw += this.yawSpeed * dt;
-      this.yawSpeed = this.yawSpeed * 0.92;
-      if (shouldResumeAutoRotate(this.yawSpeed)) {
+      this.pitch = clampOrbitPitch(this.pitch + this.pitchSpeed * dt);
+      this.yawSpeed = decayOrbitSpeed(this.yawSpeed, dt);
+      this.pitchSpeed = decayOrbitSpeed(this.pitchSpeed, dt);
+      if (shouldResumeAutoRotate(this.yawSpeed) && shouldResumeAutoRotate(this.pitchSpeed)) {
         const sign = this.yawSign < 0 ? -1 : 1;
         this.yawSpeed = sign * AUTO_ROTATE_YAW_SPEED;
+        this.pitchSpeed = 0;
         this.coasting = false;
         this.dragging = false;
       }
     } else if (!this.dragging && !this.pickOrbitHold) {
       this.yaw += this.yawSpeed * dt;
     }
-    this.applyCamera();
-    this.renderOrbitFrame();
   }
 
   private renderOrbitFrame(): void {
@@ -966,14 +1055,22 @@ export struct InventoryDiscoveryRadar {
 
   private applyPanDelta(dx: number, dy: number, now: number): void {
     const prevYaw = this.yaw;
-    this.yaw -= dx * DRAG_RAD_PER_VP;
-    this.pitch = clampOrbitPitch(this.pitch - dy * DRAG_RAD_PER_VP);
+    const prevPitch = this.pitch;
+    const next = applyOrbitPan(this.yaw, this.pitch, dx, dy, orbitSensitivity(this.canvasSize));
+    this.yaw = next.x;
+    this.pitch = next.y;
     const dt = (now - this.panLastTs) / 1000;
     if (dt > 0.001) {
-      this.yawSpeed = (this.yaw - prevYaw) / dt;
+      this.yawSpeed = clampOrbitSpeed((this.yaw - prevYaw) / dt);
+      this.pitchSpeed = clampOrbitSpeed((this.pitch - prevPitch) / dt);
       this.noteYawSign(this.yawSpeed);
     }
     this.applyCamera();
+    this.refreshPointAppearances();
+    this.renderOrbitFrame();
+    if (!this.sceneReady || this.sceneFailed) {
+      this.drawFrame();
+    }
   }
 
   private onSpherePanEnd(event: GestureEvent): void {
@@ -985,14 +1082,14 @@ export struct InventoryDiscoveryRadar {
       this.panBeyondSlop = false;
       const sign = this.yawSign < 0 ? -1 : 1;
       this.yawSpeed = sign * AUTO_ROTATE_YAW_SPEED;
-      this.pickAt(this.panStartX, this.panStartY);
+      this.handleTapAt(this.panStartX, this.panStartY);
+      this.pickOrbitHold = false;
       return;
     }
     this.panBeyondSlop = false;
-    const flick = -event.velocityX * DRAG_RAD_PER_VP;
-    if (Math.abs(flick) > Math.abs(this.yawSpeed)) {
-      this.yawSpeed = flick;
-    }
+    const k = orbitSensitivity(this.canvasSize);
+    this.yawSpeed = clampOrbitSpeed(-event.velocityX * k);
+    this.pitchSpeed = clampOrbitSpeed(event.velocityY * k);
     this.noteYawSign(this.yawSpeed);
     this.coasting = true;
     this.dragging = true;
@@ -1005,58 +1102,9 @@ export struct InventoryDiscoveryRadar {
     this.pickAt(event.x, event.y);
   }
 
-  private deviceKeyFromHit(node: Node): string {
-    let current: Node | null = node;
-    let depth = 0;
-    while (current != null && depth < 4) {
-      if (this.pointNodes.has(current.name)) {
-        return current.name;
-      }
-      if (current.name === SHELL_NAME) {
-        return '';
-      }
-      current = current.parent;
-      depth++;
-    }
-    return '';
-  }
-
-  private async pickAt(x: number, y: number): Promise<void> {
-    const camera = this.cameraRef;
-    const scene = this.sceneRef;
-    if (camera == null || scene == null || scene.root == null || this.sceneFailed) {
-      this.pickOrbitHold = false;
-      return;
-    }
-    const serial = this.pickSerial + 1;
-    this.pickSerial = serial;
-    this.pickOrbitHold = true;
-    const ndc = localToNdc(x, y, this.canvasSize, this.canvasSize);
-    const view: Vec2 = { x: ndc.x, y: ndc.y };
-    let hits: RaycastResult[] = [];
-    try {
-      hits = await camera.raycast(view, { rootNode: scene.root });
-    } catch (_err) {
-      console.error('InventoryDiscoveryRadar raycast failed');
-      if (serial === this.pickSerial) {
-        this.pickOrbitHold = false;
-      }
-      return;
-    }
-    if (serial !== this.pickSerial) {
-      return;
-    }
+  private pickAt(x: number, y: number): void {
     this.pickOrbitHold = false;
-    if (this.disposed) {
-      return;
-    }
-    for (let i = 0; i < hits.length; i++) {
-      const key = this.deviceKeyFromHit(hits[i].node);
-      if (key.length > 0) {
-        this.selectedDeviceKey = key;
-        return;
-      }
-    }
+    this.handleTapAt(x, y);
   }
 
   private sceneOptions(): SceneOptions {
@@ -1067,60 +1115,26 @@ export struct InventoryDiscoveryRadar {
     return empty;
   }
 
-  @Builder
-  centerHubOverlay() {
-    Stack({ alignContent: Alignment.Center }) {
-      Circle()
-        .width(this.hubLayoutDiameter() + 4 * (this.canvasSize / DEFAULT_CANVAS_SIZE))
-        .height(this.hubLayoutDiameter() + 4 * (this.canvasSize / DEFAULT_CANVAS_SIZE))
-        .fill(AppleTheme.HUB_GLOW)
-      Circle()
-        .width(this.hubLayoutDiameter())
-        .height(this.hubLayoutDiameter())
-        .fill(AppleTheme.PRIMARY)
-      Column() {
-        Text($r('app.string.inventory_hub_near'))
-          .fontSize(this.hubLayoutFontSize())
-          .fontWeight(FontWeight.Medium)
-          .fontColor(AppleTheme.CANVAS)
-          .textAlign(TextAlign.Center)
-          .lineHeight(this.hubLayoutFontSize())
-          .maxLines(1)
-      }
-      .width(this.hubLayoutDiameter())
-      .height(this.hubLayoutDiameter())
-      .justifyContent(FlexAlign.Center)
-      .alignItems(HorizontalAlign.Center)
-    }
-    .width(this.hubLayoutDiameter())
-    .height(this.hubLayoutDiameter())
-    .hitTestBehavior(HitTestMode.None)
-  }
-
   /**
    * SDK createShader 只接受资源 URI，没有内联 fresnel 源码接口。
    * 用屏幕空间描边环代替实心球壳，中心不产生球面片元。
    */
   @Builder
-  sphereRimOverlay() {
-    Stack({ alignContent: Alignment.Center }) {
+  selectedPointRing() {
+    if (this.selectedRingVisible) {
       Circle()
-        .width(this.rimLayoutDiameter())
-        .height(this.rimLayoutDiameter())
-        .fill('#00000000')
-        .stroke('rgba(0, 102, 204, 0.16)')
-        .strokeWidth(8)
-      Circle()
-        .width(this.rimLayoutDiameter())
-        .height(this.rimLayoutDiameter())
+        .width(this.selectedRingSize)
+        .height(this.selectedRingSize)
         .fill('#00000000')
         .stroke(AppleTheme.PRIMARY)
         .strokeWidth(1.5)
-        .opacity(0.45)
+        .opacity(0.9)
+        .position({
+          x: this.selectedRingX - this.selectedRingSize / 2,
+          y: this.selectedRingY - this.selectedRingSize / 2
+        })
+        .hitTestBehavior(HitTestMode.None)
     }
-    .width(this.canvasSize)
-    .height(this.canvasSize)
-    .hitTestBehavior(HitTestMode.None)
   }
 
   @Builder
@@ -1130,7 +1144,7 @@ export struct InventoryDiscoveryRadar {
         .width(this.canvasSize)
         .height(this.canvasSize)
         .backgroundColor('#00000000')
-      this.sphereRimOverlay()
+      this.selectedPointRing()
     }
     .width(this.canvasSize)
     .height(this.canvasSize)
@@ -1158,6 +1172,7 @@ export struct InventoryDiscoveryRadar {
       Canvas(this.ctx)
         .width(this.canvasSize)
         .height(this.canvasSize)
+        .hitTestBehavior(HitTestMode.None)
         .accessibilityLevel('no')
         .onReady(() => {
           if (this.disposed) {
@@ -1172,13 +1187,27 @@ export struct InventoryDiscoveryRadar {
           this.startTick();
         })
 
-      this.centerHubOverlay()
     }
     .width(this.canvasSize)
     .height(this.canvasSize)
     .alignContent(Alignment.Center)
     .hitTestBehavior(HitTestMode.Default)
+    .gesture(
+      PanGesture({ fingers: 1, direction: PanDirection.All, distance: 1 })
+        .onActionStart((event: GestureEvent) => {
+          this.onSpherePanStart(event);
+        })
+        .onActionUpdate((event: GestureEvent) => {
+          this.onSpherePanUpdate(event);
+        })
+        .onActionEnd((event: GestureEvent) => {
+          this.onSpherePanEnd(event);
+        })
+    )
     .onClick((event: ClickEvent) => {
+      if (Date.now() - this.lastPanEndMs < 400) {
+        return;
+      }
       this.handleTapAt(event.x, event.y);
     })
   }

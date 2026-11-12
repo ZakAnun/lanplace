@@ -5,6 +5,7 @@ import {
   InventoryDeviceKind
 } from '../model/HomeInventoryDevice';
 import { ScannedDevice } from '../model/ScannedDevice';
+import { bleInventoryKey } from '../common/InventoryDeviceMerge';
 import { BleScanCoordinator } from './BleScanCoordinator';
 import { BLE_SCAN_STOP_QUIET } from './BleScanService';
 import { LanDiscoveredDevice, MdnsScanService } from './MdnsScanService';
@@ -29,7 +30,7 @@ export class HomeInventoryCoordinator {
     for (let i = 0; i < HomeInventoryCoordinator.bleDevices.length; i++) {
       const d = HomeInventoryCoordinator.bleDevices[i];
       merged.push({
-        deviceKey: `ble:${d.deviceId}`,
+        deviceKey: bleInventoryKey(d.deviceId),
         kind: InventoryDeviceKind.Ble,
         displayName: d.displayName.length > 0 ? d.displayName : '未知蓝牙设备',
         detailLine: d.detailLine,

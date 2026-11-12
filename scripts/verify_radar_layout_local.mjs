@@ -129,6 +129,12 @@ const layoutSource = readFileSync(
 );
 ok('stable sphere helper exists', layoutSource.includes('deviceSpherePointForStableKey'));
 
+const cameraSource = readFileSync(
+  new URL('../entry/src/main/ets/common/SphereCameraMath.ets', import.meta.url),
+  'utf8'
+);
+ok('sphere facing helpers exist', cameraSource.includes('sphereFacing') && cameraSource.includes('pointFacingScale'));
+
 const radarSource = readFileSync(
   new URL('../entry/src/main/ets/components/InventoryDiscoveryRadar.ets', import.meta.url),
   'utf8'
@@ -138,7 +144,49 @@ ok(
   'inventory radar hosts Component3D',
   radarSource.includes('Component3D(') &&
     radarSource.includes('Scene.load') &&
-    radarSource.includes('raycast')
+    radarSource.includes('pickNearestFrontKey')
+);
+ok(
+  'radar applies facing appearance',
+  radarSource.includes('applyPointAppearance') &&
+    radarSource.includes('pointFacingScale') &&
+    radarSource.includes('pointFacingAlpha')
+);
+ok(
+  'radar selected ring overlay',
+  radarSource.includes('selectedPointRing') &&
+    radarSource.includes('worldToCanvas')
+);
+ok(
+  'canvas draws far points first',
+  radarSource.includes('items.sort((a, b) => a.z - b.z)')
+);
+ok(
+  'inventory sphere uses field dots not rim',
+  radarSource.includes('drawFieldPoint') &&
+    radarSource.includes('createFieldCloud') &&
+    !radarSource.includes('sphereRimOverlay') &&
+    !radarSource.includes('centerHubOverlay')
+);
+ok(
+  'golden field helper exists',
+  layoutSource.includes('goldenSpherePoint')
+);
+ok(
+  'orbit pan follows hand',
+  cameraSource.includes('applyOrbitPan') &&
+    cameraSource.includes('pitch + dyVp')
+);
+ok(
+  'real-scan synthetic feed exists',
+  readFileSync(new URL('../entry/src/main/ets/common/InventoryDeviceMerge.ets', import.meta.url), 'utf8')
+    .includes('syntheticInventoryFeed')
+);
+ok(
+  'canvas fallback can orbit by pan',
+  radarSource.includes('canvasBranch()') &&
+    radarSource.includes('this.stepOrbit(') &&
+    (radarSource.split('PanGesture({ fingers: 1').length - 1) >= 2
 );
 
 console.log('---');

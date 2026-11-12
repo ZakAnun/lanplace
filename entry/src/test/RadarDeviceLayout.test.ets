@@ -1,5 +1,9 @@
 import { describe, it, expect } from '@ohos/hypium';
-import { deviceSpherePointForIndex, deviceSpherePointForStableKey } from '../main/ets/common/RadarDeviceLayout';
+import {
+  deviceSpherePointForIndex,
+  deviceSpherePointForStableKey,
+  goldenSpherePoint
+} from '../main/ets/common/RadarDeviceLayout';
 
 export default function radarDeviceLayoutTest() {
   describe('RadarDeviceLayout', () => {
@@ -9,6 +13,15 @@ export default function radarDeviceLayoutTest() {
         const p = deviceSpherePointForIndex(i, total);
         const len = Math.sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
         expect(Math.abs(len - 0.85) < 0.001).assertTrue();
+      }
+    });
+
+    it('goldenSpherePointOnGivenRadius', 0, () => {
+      const total = 8;
+      for (let i = 0; i < total; i++) {
+        const p = goldenSpherePoint(i, total, 1);
+        const len = Math.sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
+        expect(Math.abs(len - 1) < 0.001).assertTrue();
       }
     });
 
