@@ -2,7 +2,6 @@ import {
   Blend,
   Camera,
   Color,
-  CullMode,
   EnvironmentBackgroundType,
   Geometry,
   Light,
@@ -11,7 +10,6 @@ import {
   Node,
   Quaternion,
   RaycastResult,
-  RenderSort,
   RenderingPipelineType,
   Scene,
   SceneResourceFactory,
@@ -37,8 +35,10 @@ import {
   clampOrbitPitch,
   isTapGesture,
   localToNdc,
+  ORBIT_RADIUS,
   orbitEye,
-  shouldResumeAutoRotate
+  shouldResumeAutoRotate,
+  TAP_SLOP_VP
 } from '../common/SphereCameraMath';
 import {
   HomeInventoryDevice,
@@ -76,10 +76,10 @@ const HIT_RADIUS: number = 26;
 const POINT_RADIUS: number = 0.045;
 const SELECTED_POINT_RADIUS: number = 0.06;
 const DRAG_RAD_PER_VP: number = 0.006;
+const CAMERA_FOV_RAD: number = 50 * Math.PI / 180;
+/** 仅用于射线跳过；屏幕光环不是网格，避免外壳抢走设备拾取。 */
 const SHELL_NAME: string = 'inventoryShell';
-const SHELL_RADIUS: number = SPHERE_RADIUS * 1.02;
-const SHELL_ALPHA: number = 0.04;
-const SHELL_SORT_LAYER: number = 48;
+const RIM_SPHERE_RADIUS: number = SPHERE_RADIUS * 1.02;
 const PRIMARY_G: number = 102 / 255;
 const PRIMARY_B: number = 204 / 255;
 const LAN_G: number = 143 / 255;
@@ -111,6 +111,9 @@ export struct InventoryDiscoveryRadar {
   private panLastX: number = 0;
   private panLastY: number = 0;
   private panLastTs: number = 0;
+  private panBeyondSlop: boolean = false;
+  /** 点击拾取完成前冻结自转，射线对着按下时的相机。 */
+  private pickOrbitHold: boolean = false;
   private coasting: boolean = false;
   private yawSign: number = 1;
   private sceneBooting: boolean = false;
@@ -249,6 +252,28 @@ export struct InventoryDiscoveryRadar {
   private hubLayoutFontSize(): number {
     return Math.max(AppleTheme.HUB_LABEL_MIN_FONT,
       HUB_FONT_BASE * (this.canvasSize / DEFAULT_CANVAS_SIZE));
+  }
+
+  /** 相机看向原点时，球体外缘在正方形画布上的投影直径。 */
+  private rimLayoutDiameter(): number {
+    const dist = ORBIT_RADIUS;
+    if (dist <= RIM_SPHERE_RADIUS) {
+      return this.canvasSize;
+    }
+    const halfFov = CAMERA_FOV_RAD * 0.5;
+    const tanHalf = Math.tan(halfFov);
+    if (tanHalf <= 0.0001) {
+      return this.canvasSize;
+    }
+    const angular = Math.asin(RIM_SPHERE_RADIUS / dist);
+    let diameter = this.canvasSize * (Math.tan(angular) / tanHalf);
+    if (diameter < 1) {
+      diameter = 1;
+    }
+    if (diameter > this.canvasSize) {
+      diameter = this.canvasSize;
+    }
+    return diameter;
   }
 
   private layoutToDrawScale(): number {
@@ -513,15 +538,39 @@ export struct InventoryDiscoveryRadar {
     }
   }
 
+  private releaseBootScene(scene: Scene | null): void {
+    const held = this.sceneRef;
+    this.sceneRef = null;
+    this.cameraRef = null;
+    this.factoryRef = null;
+    this.bleMat = null;
+    this.lanMat = null;
+    this.sceneOpt = null;
+    this.sceneReady = false;
+    this.sceneBooted = false;
+    this.pointNodes.clear();
+    const target: Scene | null = held != null ? held : scene;
+    if (target != null) {
+      try {
+        target.destroy();
+      } catch (_err) {
+      }
+    }
+  }
+
   private async bootScene(): Promise<void> {
     if (this.disposed || this.sceneBooting || this.sceneReady || this.sceneFailed) {
       return;
     }
     this.sceneBooting = true;
+    let scene: Scene | null = null;
     try {
-      const scene = await Scene.load();
+      scene = await Scene.load();
+      if (scene == null) {
+        throw new Error('scene load missing');
+      }
       if (this.disposed) {
-        scene.destroy();
+        this.releaseBootScene(scene);
         return;
       }
       const factory = scene.getResourceFactory();
@@ -531,7 +580,7 @@ export struct InventoryDiscoveryRadar {
       }
       const camera = await factory.createCamera({ name: 'inventoryCam' });
       camera.enabled = true;
-      camera.fov = 50 * Math.PI / 180;
+      camera.fov = CAMERA_FOV_RAD;
       camera.nearPlane = 0.05;
       camera.farPlane = 30;
       camera.renderingPipeline = RenderingPipelineType.FORWARD;
@@ -547,7 +596,6 @@ export struct InventoryDiscoveryRadar {
       this.attachToRoot(root, light);
 
       this.clearSceneBackground(scene);
-      await this.createShell(factory, root);
       this.bleMat = await this.createUnlit(factory, 'blePointMat', 0, PRIMARY_G, PRIMARY_B, 1, false);
       this.lanMat = await this.createUnlit(factory, 'lanPointMat', 0, LAN_G, LAN_B, 1, false);
 
@@ -559,8 +607,7 @@ export struct InventoryDiscoveryRadar {
       this.enqueuePointSync();
       await this.pointSyncTail;
       if (this.disposed) {
-        scene.destroy();
-        this.sceneRef = null;
+        this.releaseBootScene(scene);
         return;
       }
       this.sceneOpt = { scene: scene, modelType: ModelType.SURFACE };
@@ -572,6 +619,7 @@ export struct InventoryDiscoveryRadar {
         this.startOrbitTick();
       }
     } catch (_err) {
+      this.releaseBootScene(scene);
       if (!this.disposed) {
         this.markSceneFailed();
       }
@@ -612,22 +660,6 @@ export struct InventoryDiscoveryRadar {
     for (let i = 0; i < subs.length; i++) {
       subs[i].material = mat;
     }
-  }
-
-  /** 外缘淡光：略大于设备球、极低 alpha、双面、透明层后画。无经线，3D 路径不放中心「近」。 */
-  private async createShell(factory: SceneResourceFactory, root: Node): Promise<void> {
-    const def = new SphereGeometry();
-    def.radius = SHELL_RADIUS;
-    def.segmentCount = 32;
-    const mesh = await factory.createMesh({ name: 'inventoryShellMesh' }, def);
-    const geom = await factory.createGeometry({ name: SHELL_NAME }, mesh);
-    geom.name = SHELL_NAME;
-    const mat = await this.createUnlit(factory, 'inventoryShellMat', 0, PRIMARY_G, PRIMARY_B, SHELL_ALPHA, true);
-    mat.cullMode = CullMode.NONE;
-    const sort: RenderSort = { renderSortLayer: SHELL_SORT_LAYER, renderSortLayerOrder: 0 };
-    mat.renderSort = sort;
-    this.paintGeometry(geom, mat);
-    this.attachToRoot(root, geom);
   }
 
   private enqueuePointSync(): void {
@@ -851,7 +883,7 @@ export struct InventoryDiscoveryRadar {
         this.coasting = false;
         this.dragging = false;
       }
-    } else if (!this.dragging) {
+    } else if (!this.dragging && !this.pickOrbitHold) {
       this.yaw += this.yawSpeed * dt;
     }
     this.applyCamera();
@@ -897,6 +929,7 @@ export struct InventoryDiscoveryRadar {
   private onSpherePanStart(event: GestureEvent): void {
     this.dragging = true;
     this.coasting = false;
+    this.panBeyondSlop = false;
     this.panStartX = this.fingerLocalX(event);
     this.panStartY = this.fingerLocalY(event);
     this.panLastX = event.offsetX;
@@ -904,10 +937,34 @@ export struct InventoryDiscoveryRadar {
     this.panLastTs = Date.now();
   }
 
+  /** 累计位移未超过 TAP_SLOP_VP 时不改轨道；越过后只吃超出的那一段。 */
   private onSpherePanUpdate(event: GestureEvent): void {
     const now = Date.now();
+    if (!this.panBeyondSlop) {
+      if (isTapGesture(event.offsetX, event.offsetY)) {
+        return;
+      }
+      this.panBeyondSlop = true;
+      const dist = Math.sqrt(event.offsetX * event.offsetX + event.offsetY * event.offsetY);
+      const excess = dist - TAP_SLOP_VP;
+      if (excess > 0 && dist > 0.0001) {
+        const scale = excess / dist;
+        this.applyPanDelta(event.offsetX * scale, event.offsetY * scale, now);
+      }
+      this.panLastX = event.offsetX;
+      this.panLastY = event.offsetY;
+      this.panLastTs = now;
+      return;
+    }
     const dx = event.offsetX - this.panLastX;
     const dy = event.offsetY - this.panLastY;
+    this.applyPanDelta(dx, dy, now);
+    this.panLastX = event.offsetX;
+    this.panLastY = event.offsetY;
+    this.panLastTs = now;
+  }
+
+  private applyPanDelta(dx: number, dy: number, now: number): void {
     const prevYaw = this.yaw;
     this.yaw -= dx * DRAG_RAD_PER_VP;
     this.pitch = clampOrbitPitch(this.pitch - dy * DRAG_RAD_PER_VP);
@@ -916,22 +973,22 @@ export struct InventoryDiscoveryRadar {
       this.yawSpeed = (this.yaw - prevYaw) / dt;
       this.noteYawSign(this.yawSpeed);
     }
-    this.panLastX = event.offsetX;
-    this.panLastY = event.offsetY;
-    this.panLastTs = now;
     this.applyCamera();
   }
 
   private onSpherePanEnd(event: GestureEvent): void {
     this.lastPanEndMs = Date.now();
-    if (isTapGesture(event.offsetX, event.offsetY)) {
+    if (!this.panBeyondSlop && isTapGesture(event.offsetX, event.offsetY)) {
+      this.pickOrbitHold = true;
       this.dragging = false;
       this.coasting = false;
+      this.panBeyondSlop = false;
       const sign = this.yawSign < 0 ? -1 : 1;
       this.yawSpeed = sign * AUTO_ROTATE_YAW_SPEED;
       this.pickAt(this.panStartX, this.panStartY);
       return;
     }
+    this.panBeyondSlop = false;
     const flick = -event.velocityX * DRAG_RAD_PER_VP;
     if (Math.abs(flick) > Math.abs(this.yawSpeed)) {
       this.yawSpeed = flick;
@@ -968,10 +1025,12 @@ export struct InventoryDiscoveryRadar {
     const camera = this.cameraRef;
     const scene = this.sceneRef;
     if (camera == null || scene == null || scene.root == null || this.sceneFailed) {
+      this.pickOrbitHold = false;
       return;
     }
     const serial = this.pickSerial + 1;
     this.pickSerial = serial;
+    this.pickOrbitHold = true;
     const ndc = localToNdc(x, y, this.canvasSize, this.canvasSize);
     const view: Vec2 = { x: ndc.x, y: ndc.y };
     let hits: RaycastResult[] = [];
@@ -979,9 +1038,16 @@ export struct InventoryDiscoveryRadar {
       hits = await camera.raycast(view, { rootNode: scene.root });
     } catch (_err) {
       console.error('InventoryDiscoveryRadar raycast failed');
+      if (serial === this.pickSerial) {
+        this.pickOrbitHold = false;
+      }
       return;
     }
-    if (serial !== this.pickSerial || this.disposed) {
+    if (serial !== this.pickSerial) {
+      return;
+    }
+    this.pickOrbitHold = false;
+    if (this.disposed) {
       return;
     }
     for (let i = 0; i < hits.length; i++) {
@@ -1031,6 +1097,32 @@ export struct InventoryDiscoveryRadar {
     .hitTestBehavior(HitTestMode.None)
   }
 
+  /**
+   * SDK createShader 只接受资源 URI，没有内联 fresnel 源码接口。
+   * 用屏幕空间描边环代替实心球壳，中心不产生球面片元。
+   */
+  @Builder
+  sphereRimOverlay() {
+    Stack({ alignContent: Alignment.Center }) {
+      Circle()
+        .width(this.rimLayoutDiameter())
+        .height(this.rimLayoutDiameter())
+        .fill('#00000000')
+        .stroke('rgba(0, 102, 204, 0.16)')
+        .strokeWidth(8)
+      Circle()
+        .width(this.rimLayoutDiameter())
+        .height(this.rimLayoutDiameter())
+        .fill('#00000000')
+        .stroke(AppleTheme.PRIMARY)
+        .strokeWidth(1.5)
+        .opacity(0.45)
+    }
+    .width(this.canvasSize)
+    .height(this.canvasSize)
+    .hitTestBehavior(HitTestMode.None)
+  }
+
   @Builder
   sphereBranch() {
     Stack({ alignContent: Alignment.Center }) {
@@ -1038,6 +1130,7 @@ export struct InventoryDiscoveryRadar {
         .width(this.canvasSize)
         .height(this.canvasSize)
         .backgroundColor('#00000000')
+      this.sphereRimOverlay()
     }
     .width(this.canvasSize)
     .height(this.canvasSize)
