@@ -10,6 +10,66 @@ export const MAX_ORBIT_SPEED_RAD: number = 4;
 export const ORBIT_COAST_TAU_S: number = 0.55;
 export const DEFAULT_ORBIT_CANVAS: number = 280;
 
+/** GestureEvent.fingerList 在真机上可能 length>0 但 [0] 为空。 */
+export interface GestureFingerLocal {
+  localX: number;
+  localY: number;
+}
+
+export type GestureFingerSlot = GestureFingerLocal | undefined | null;
+
+export function fingerLocalXOf(
+  finger: GestureFingerSlot,
+  fallback: number
+): number {
+  if (finger == null) {
+    return fallback;
+  }
+  return finger.localX;
+}
+
+export function fingerLocalYOf(
+  finger: GestureFingerSlot,
+  fallback: number
+): number {
+  if (finger == null) {
+    return fallback;
+  }
+  return finger.localY;
+}
+
+export function firstFingerLocalX(
+  fingers: GestureFingerSlot[] | undefined | null,
+  fallback: number
+): number {
+  return firstFingerLocalCoord(fingers, true, fallback);
+}
+
+export function firstFingerLocalY(
+  fingers: GestureFingerSlot[] | undefined | null,
+  fallback: number
+): number {
+  return firstFingerLocalCoord(fingers, false, fallback);
+}
+
+function firstFingerLocalCoord(
+  fingers: GestureFingerSlot[] | undefined | null,
+  useX: boolean,
+  fallback: number
+): number {
+  if (fingers == null) {
+    return fallback;
+  }
+  const total = fingers.length;
+  for (let i = 0; i < total; i++) {
+    const finger = fingers[i];
+    if (finger != null) {
+      return useX ? fingerLocalXOf(finger, fallback) : fingerLocalYOf(finger, fallback);
+    }
+  }
+  return fallback;
+}
+
 export function isTapGesture(dxVp: number, dyVp: number): boolean {
   return dxVp * dxVp + dyVp * dyVp < TAP_SLOP_VP * TAP_SLOP_VP;
 }

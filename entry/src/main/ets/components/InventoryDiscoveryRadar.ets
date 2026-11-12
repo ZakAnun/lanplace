@@ -34,6 +34,8 @@ import {
   clampOrbitPitch,
   clampOrbitSpeed,
   decayOrbitSpeed,
+  firstFingerLocalX,
+  firstFingerLocalY,
   isTapGesture,
   orbitEye,
   orbitSensitivity,
@@ -992,19 +994,11 @@ export struct InventoryDiscoveryRadar {
   }
 
   private fingerLocalX(event: GestureEvent): number {
-    const fingers = event.fingerList;
-    if (fingers != null && fingers.length > 0) {
-      return fingers[0].localX;
-    }
-    return this.canvasSize / 2;
+    return firstFingerLocalX(event.fingerList, this.canvasSize / 2);
   }
 
   private fingerLocalY(event: GestureEvent): number {
-    const fingers = event.fingerList;
-    if (fingers != null && fingers.length > 0) {
-      return fingers[0].localY;
-    }
-    return this.canvasSize / 2;
+    return firstFingerLocalY(event.fingerList, this.canvasSize / 2);
   }
 
   private noteYawSign(speed: number): void {

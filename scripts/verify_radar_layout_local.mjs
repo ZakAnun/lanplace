@@ -188,6 +188,34 @@ ok(
     radarSource.includes('this.stepOrbit(') &&
     (radarSource.split('PanGesture({ fingers: 1').length - 1) >= 2
 );
+ok(
+  'pan ignores missing primary finger',
+  cameraSource.includes('firstFingerLocalX') &&
+    radarSource.includes('firstFingerLocalX(event.fingerList') &&
+    !radarSource.includes('fingers[0].localX') &&
+    !radarSource.includes('fingers[0].localY')
+);
+
+function firstFingerLocalX(fingers, fallback) {
+  if (fingers == null) {
+    return fallback;
+  }
+  for (let i = 0; i < fingers.length; i++) {
+    const finger = fingers[i];
+    if (finger != null) {
+      return finger.localX;
+    }
+  }
+  return fallback;
+}
+
+ok('pan fallback when finger list missing', firstFingerLocalX(undefined, 140) === 140);
+ok('pan fallback when finger list empty', firstFingerLocalX([], 140) === 140);
+ok(
+  'Mate 80 hole at fingers[0] does not throw',
+  firstFingerLocalX([undefined], 140) === 140 &&
+    firstFingerLocalX([undefined, { localX: 18, localY: 24 }], 140) === 18
+);
 
 console.log('---');
 console.log(failed === 0 ? 'All local layout checks passed.' : `${failed} check(s) failed.`);

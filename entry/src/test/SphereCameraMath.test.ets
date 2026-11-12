@@ -4,6 +4,11 @@ import {
   clampOrbitPitch,
   clampOrbitSpeed,
   decayOrbitSpeed,
+  fingerLocalXOf,
+  fingerLocalYOf,
+  firstFingerLocalX,
+  firstFingerLocalY,
+  GestureFingerLocal,
   isTapGesture,
   localToNdc,
   MAX_ORBIT_SPEED_RAD,
@@ -81,6 +86,32 @@ export default function sphereCameraMathTest() {
       const later = decayOrbitSpeed(2, 0.55);
       expect(later < 1.0).assertTrue();
       expect(later > 0.5).assertTrue();
+    });
+    it('firstFingerLocalFallsBackWhenListMissing', 0, () => {
+      expect(firstFingerLocalX(undefined, 140)).assertEqual(140);
+      expect(firstFingerLocalY(undefined, 140)).assertEqual(140);
+      const empty: GestureFingerLocal[] = [];
+      expect(firstFingerLocalX(empty, 140)).assertEqual(140);
+      expect(firstFingerLocalY(empty, 140)).assertEqual(140);
+    });
+    it('fingerLocalOfUndefinedPrimaryDoesNotThrow', 0, () => {
+      expect(fingerLocalXOf(undefined, 140)).assertEqual(140);
+      expect(fingerLocalYOf(undefined, 140)).assertEqual(140);
+    });
+    it('firstFingerLocalSkipsUndefinedPrimary', 0, () => {
+      const later: GestureFingerLocal = { localX: 18, localY: 24 };
+      const holeThenFinger: Array<GestureFingerLocal | undefined> = [undefined, later];
+      expect(firstFingerLocalX(holeThenFinger, 140)).assertEqual(18);
+      expect(firstFingerLocalY(holeThenFinger, 140)).assertEqual(24);
+      const onlyHole: Array<GestureFingerLocal | undefined> = [undefined];
+      expect(firstFingerLocalX(onlyHole, 140)).assertEqual(140);
+      expect(firstFingerLocalY(onlyHole, 140)).assertEqual(140);
+    });
+    it('firstFingerLocalReadsFirstDefinedFinger', 0, () => {
+      const finger: GestureFingerLocal = { localX: 18, localY: 24 };
+      const fingers: GestureFingerLocal[] = [finger];
+      expect(firstFingerLocalX(fingers, 140)).assertEqual(18);
+      expect(firstFingerLocalY(fingers, 140)).assertEqual(24);
     });
     it('pickIgnoresBackHemisphereOnDenseFeed', 0, () => {
       const feed = syntheticInventoryFeed(70, 25);
