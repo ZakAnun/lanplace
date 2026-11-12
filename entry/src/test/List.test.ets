@@ -6,6 +6,7 @@ import deviceEnvironmentTest from './DeviceEnvironment.test';
 import radarOrbitGeometryTest from './RadarOrbitGeometry.test';
 import devicePickerSheetLayoutTest from './DevicePickerSheetLayout.test';
 import agcAuditLayoutTest from './AgcAuditLayout.test';
+import sphereCameraMathTest from './SphereCameraMath.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -13,6 +14,7 @@ export default function testsuite() {
   bleAdvertParserTest();
   radarLayoutHelperTest();
   radarDeviceLayoutTest();
+  sphereCameraMathTest();
   radarOrbitGeometryTest();
   devicePickerSheetLayoutTest();
   deviceEnvironmentTest();

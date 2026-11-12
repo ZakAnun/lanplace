@@ -4,6 +4,8 @@ export interface Vec3 {
   z: number;
 }
 
+export const SPHERE_RADIUS: number = 1;
+
 /** 按列表序号均匀分布在球面上，与 RSSI/设备 ID 无关，避免假方位含义 */
 export function deviceSpherePointForIndex(index: number, total: number): Vec3 {
   if (total <= 0) {
@@ -17,6 +19,26 @@ export function deviceSpherePointForIndex(index: number, total: number): Vec3 {
     x: Math.sin(phi) * Math.cos(theta) * r,
     y: Math.cos(phi) * r,
     z: Math.sin(phi) * Math.sin(theta) * r
+  };
+}
+
+export function deviceSpherePointForStableKey(deviceKey: string, radius: number = SPHERE_RADIUS): Vec3 {
+  let h1 = 2166136261;
+  let h2 = 16777619;
+  for (let i = 0; i < deviceKey.length; i++) {
+    const c = deviceKey.charCodeAt(i);
+    h1 = ((h1 ^ c) * 16777619) >>> 0;
+    h2 = ((h2 ^ c) * 2246822519) >>> 0;
+  }
+  const u = ((h1 >>> 0) % 100000) / 100000;
+  const y = 1 - 2 * u;
+  const rAtY = Math.sqrt(Math.max(0, 1 - y * y));
+  const golden = (1 + Math.sqrt(5)) / 2;
+  const theta = 2 * Math.PI * ((((h2 >>> 0) / 4294967296) * golden) % 1);
+  return {
+    x: Math.cos(theta) * rAtY * radius,
+    y: y * radius,
+    z: Math.sin(theta) * rAtY * radius
   };
 }
 

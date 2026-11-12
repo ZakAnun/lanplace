@@ -123,6 +123,12 @@ ok(
 );
 ok('portrait stop button hugs text', !portraitStop.includes(".width('100%')"));
 
+const layoutSource = readFileSync(
+  new URL('../entry/src/main/ets/common/RadarDeviceLayout.ets', import.meta.url),
+  'utf8'
+);
+ok('stable sphere helper exists', layoutSource.includes('deviceSpherePointForStableKey'));
+
 console.log('---');
 console.log(failed === 0 ? 'All local layout checks passed.' : `${failed} check(s) failed.`);
 process.exit(failed ? 1 : 0);
