@@ -129,6 +129,12 @@ const layoutSource = readFileSync(
 );
 ok('stable sphere helper exists', layoutSource.includes('deviceSpherePointForStableKey'));
 
+const radarSource = readFileSync(
+  new URL('../entry/src/main/ets/components/InventoryDiscoveryRadar.ets', import.meta.url),
+  'utf8'
+);
+ok('canvas fallback skips hub links', !radarSource.includes('this.drawHubLinks('));
+
 console.log('---');
 console.log(failed === 0 ? 'All local layout checks passed.' : `${failed} check(s) failed.`);
 process.exit(failed ? 1 : 0);

@@ -3,9 +3,6 @@ import { deviceSpherePointForKey, ripplePhaseOffset } from '../common/RadarDevic
 import {
   canvasLayoutScale,
   clampDeviceOrbitLayout,
-  evalQuadraticBezier,
-  hubEdgeRadiusLayoutVp,
-  layoutRadiusToDraw,
   minOrbitRadiusLayoutVp
 } from '../common/RadarOrbitGeometry';
 import {
@@ -33,7 +30,6 @@ interface MotionAngles {
 }
 
 interface OrbitDrawMetrics {
-  hubEdgeDraw: number;
   layoutToDraw: number;
   cxLayout: number;
   cyLayout: number;
@@ -45,8 +41,6 @@ const HIT_RADIUS: number = 26;
 const RIPPLE_PERIOD: number = 3.2;
 const HUB_DIAMETER_BASE: number = 34;
 const HUB_FONT_BASE: number = 11;
-const LINK_CTRL_FRAC: number = 0.45;
-const LINK_CTRL_WOBBLE_VP: number = 8;
 const IDLE_HUB_RIPPLE_ID: string = '__idle_hub__';
 
 @Component
@@ -166,10 +160,7 @@ export struct InventoryDiscoveryRadar {
 
   private orbitDrawMetrics(): OrbitDrawMetrics {
     const layoutToDraw = this.layoutToDrawScale();
-    const hubD = this.hubLayoutDiameter();
-    const hubEdgeLayout = hubEdgeRadiusLayoutVp(hubD);
     return {
-      hubEdgeDraw: layoutRadiusToDraw(hubEdgeLayout, layoutToDraw),
       layoutToDraw: layoutToDraw,
       cxLayout: this.canvasSize / 2,
       cyLayout: this.canvasSize / 2
@@ -192,12 +183,6 @@ export struct InventoryDiscoveryRadar {
       sy: metrics.cyLayout + oy,
       z: 0
     };
-  }
-
-  /** 平滑插值，用于连线和脉冲 */
-  private smoothStep(t: number): number {
-    const x = Math.max(0, Math.min(1, t));
-    return x * x * (3 - 2 * x);
   }
 
   /** 非匀速「摆动」视角，替代单一匀速绕圈 */
@@ -278,44 +263,6 @@ export struct InventoryDiscoveryRadar {
       ctx.strokeStyle = `rgba(${rgb}, ${alpha})`;
       ctx.lineWidth = 1.5;
       ctx.stroke();
-    }
-  }
-
-  private drawHubLinks(ctx: CanvasRenderingContext2D, items: DeviceDrawItem[], cx: number, cy: number,
-    elapsed: number, metrics: OrbitDrawMetrics): void {
-    const breathe = Math.max(0, 0.45 + 0.55 * Math.sin(elapsed * 1.2));
-    const scale = this.layoutScale();
-    const hubEdge = metrics.hubEdgeDraw;
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      const depth = this.depthFade(item.z);
-      const rgb = this.rgbForDevice(item.device);
-      const alpha = (0.06 + depth * 0.1) * breathe * item.fade;
-      const phase = ripplePhaseOffset(item.device.deviceKey) * Math.PI * 2;
-      const pulseRaw = (Math.sin(elapsed * 1.05 + phase) + 1) * 0.5;
-      const pulseT = this.smoothStep(pulseRaw);
-      const dx = item.sx - cx;
-      const dy = item.sy - cy;
-      const dist = Math.max(hubEdge, Math.sqrt(dx * dx + dy * dy));
-      const ux = dx / dist;
-      const uy = dy / dist;
-      const linkStartX = cx + ux * hubEdge;
-      const linkStartY = cy + uy * hubEdge;
-      const ctrlX = linkStartX + (item.sx - linkStartX) * LINK_CTRL_FRAC;
-      const ctrlY = linkStartY + (item.sy - linkStartY) * LINK_CTRL_FRAC -
-        Math.sin(elapsed * 0.55 + phase) * LINK_CTRL_WOBBLE_VP * scale;
-      ctx.beginPath();
-      ctx.moveTo(linkStartX, linkStartY);
-      ctx.quadraticCurveTo(ctrlX, ctrlY, item.sx, item.sy);
-      ctx.strokeStyle = `rgba(${rgb}, ${alpha})`;
-      ctx.lineWidth = 1 * scale;
-      ctx.stroke();
-
-      const pulse = evalQuadraticBezier(pulseT, linkStartX, linkStartY, ctrlX, ctrlY, item.sx, item.sy);
-      ctx.beginPath();
-      ctx.arc(pulse.x, pulse.y, 2.5 * scale, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${rgb}, ${0.35 * item.fade * depth})`;
-      ctx.fill();
     }
   }
 
@@ -405,10 +352,6 @@ export struct InventoryDiscoveryRadar {
     const orbitMetrics = this.orbitDrawMetrics();
     const deviceItems = this.collectDeviceDrawItems(rotY, rotX, cx, cy, elapsed, orbitMetrics);
     this.lastProjectedDevices = deviceItems;
-
-    if (deviceItems.length > 0) {
-      this.drawHubLinks(ctx, deviceItems, cx, cy, elapsed, orbitMetrics);
-    }
 
     for (let i = 0; i < deviceItems.length; i++) {
       const item = deviceItems[i];
