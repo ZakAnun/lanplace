@@ -11,19 +11,70 @@ const UI_WAIT_MS = 800;
 const PAGE_WAIT_MS = 4000;
 const FIND_TIMEOUT_MS = 12000;
 
+class UiCopy {
+  agree: string = '同意并继续';
+  discover: string = '发现附近设备';
+  nearby: string = '附近设备';
+  appName: string = '蓝域';
+  privacy: string = '隐私';
+  caption: string = '发现周围蓝牙与当前 Wi‑Fi 网络设备';
+  stop: string = '停止扫描';
+  start: string = '开始扫描';
+  rescan: string = '再次扫描';
+  picker: string = '从列表选择设备';
+  tapHint: string = '点击光点查看设备信息';
+  chooseDevice: string = '选择设备';
+  close: string = '关闭';
+  back: string = '返回';
+  ble: string = '蓝牙';
+}
+
+function englishCopy(): UiCopy {
+  const copy = new UiCopy();
+  copy.agree = 'Agree and continue';
+  copy.discover = 'Find nearby devices';
+  copy.nearby = 'Nearby devices';
+  copy.appName = 'BlueScopes';
+  copy.privacy = 'Privacy';
+  copy.caption = 'Find nearby Bluetooth and Wi-Fi devices';
+  copy.stop = 'Stop scan';
+  copy.start = 'Start scan';
+  copy.rescan = 'Scan again';
+  copy.picker = 'Choose from list';
+  copy.tapHint = 'Tap a dot to view device info';
+  copy.chooseDevice = 'Choose a device';
+  copy.close = 'Close';
+  copy.back = 'Back';
+  copy.ble = 'Bluetooth';
+  return copy;
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function existThenClick(driver: Driver, matcher: On): Promise<boolean> {
+  return existThenClickWithin(driver, matcher, FIND_TIMEOUT_MS);
+}
+
+async function existThenClickWithin(driver: Driver, matcher: On, timeoutMs: number): Promise<boolean> {
   try {
-    await driver.waitForComponent(matcher, FIND_TIMEOUT_MS);
+    await driver.waitForComponent(matcher, timeoutMs);
     const comp = await driver.findComponent(matcher);
     await comp.click();
     await driver.delayMs(UI_WAIT_MS);
     return true;
   } catch (_err) {
     return false;
+  }
+}
+
+async function allowBluetoothIfShown(driver: Driver): Promise<void> {
+  const labels: string[] = ['允许', 'Allow', '使用期间允许', '仅在使用该应用时允许'];
+  for (let i = 0; i < labels.length; i++) {
+    if (await existThenClickWithin(driver, ON.text(labels[i]), 1200)) {
+      return;
+    }
   }
 }
 
@@ -86,13 +137,16 @@ async function anyMockDeviceVisible(driver: Driver): Promise<boolean> {
   return false;
 }
 
-async function ensureInventoryPage(driver: Driver): Promise<void> {
-  if (await componentExists(driver, ON.text('附近设备'))) {
+async function ensureInventoryPage(driver: Driver, copy: UiCopy): Promise<void> {
+  if (await componentExists(driver, ON.text(copy.nearby))) {
     return;
   }
-  await existThenClick(driver, ON.text('同意并继续'));
+  await existThenClick(driver, ON.text(copy.agree));
   await sleep(PAGE_WAIT_MS);
-  await existThenClick(driver, ON.text('发现附近设备'));
+  await existThenClick(driver, ON.text(copy.discover));
+  await sleep(PAGE_WAIT_MS);
+  await existThenClick(driver, ON.text(copy.start));
+  await allowBluetoothIfShown(driver);
   await sleep(PAGE_WAIT_MS);
 }
 
@@ -105,6 +159,7 @@ async function rotateToLandscape(driver: Driver): Promise<void> {
 export default function agcAuditFlowTest() {
   describe('AgcAuditFlow', () => {
     let driver: Driver;
+    let copy: UiCopy = new UiCopy();
 
     beforeAll(async (done: Function) => {
       const delegator = abilityDelegatorRegistry.getAbilityDelegator();
@@ -115,6 +170,11 @@ export default function agcAuditFlowTest() {
       });
       await sleep(PAGE_WAIT_MS);
       driver = await Driver.create();
+      const englishUi = await componentExistsWithin(driver, ON.text('Agree and continue'), 2500) ||
+        await componentExistsWithin(driver, ON.text('Find nearby devices'), 800);
+      if (englishUi) {
+        copy = englishCopy();
+      }
       done();
     });
 
@@ -127,22 +187,22 @@ export default function agcAuditFlowTest() {
     });
 
     it('homeOrPrivacyThenDiscoverEntry', 0, async (done: Function) => {
-      await existThenClick(driver, ON.text('同意并继续'));
+      await existThenClick(driver, ON.text(copy.agree));
       await sleep(PAGE_WAIT_MS);
-      const hasDiscover = await componentExists(driver, ON.text('发现附近设备'));
+      const hasDiscover = await componentExists(driver, ON.text(copy.discover));
       expect(hasDiscover).assertTrue();
       done();
     });
 
     it('homeLandscapeKeepsTitleRadarAndRightRail', 0, async (done: Function) => {
-      await existThenClick(driver, ON.text('同意并继续'));
+      await existThenClick(driver, ON.text(copy.agree));
       await sleep(PAGE_WAIT_MS);
-      expect(await componentExists(driver, ON.text('发现附近设备'))).assertTrue();
+      expect(await componentExists(driver, ON.text(copy.discover))).assertTrue();
       await rotateToLandscape(driver);
-      const title = await driver.findComponent(ON.text('蓝域'));
-      const action = await driver.findComponent(ON.text('发现附近设备'));
-      const privacy = await driver.findComponent(ON.text('隐私'));
-      const caption = await driver.findComponent(ON.text('发现周围蓝牙与当前 Wi‑Fi 网络设备'));
+      const title = await driver.findComponent(ON.text(copy.appName));
+      const action = await driver.findComponent(ON.text(copy.discover));
+      const privacy = await driver.findComponent(ON.text(copy.privacy));
+      const caption = await driver.findComponent(ON.text(copy.caption));
       const titleBounds = await title.getBounds();
       const actionBounds = await action.getBounds();
       const privacyBounds = await privacy.getBounds();
@@ -160,36 +220,39 @@ export default function agcAuditFlowTest() {
     it('scanLabelStaysWithPhaseAcrossRotation', 0, async (done: Function) => {
       await driver.setDisplayRotation(DisplayRotation.ROTATION_0);
       await driver.delayMs(PAGE_WAIT_MS);
-      await ensureInventoryPage(driver);
-      const alreadyScanning = await componentExists(driver, ON.text('停止扫描'));
+      await ensureInventoryPage(driver, copy);
+      const alreadyScanning = await componentExists(driver, ON.text(copy.stop));
       if (!alreadyScanning) {
-        expect(await existThenClick(driver, ON.text('开始扫描'))).assertTrue();
+        expect(await existThenClick(driver, ON.text(copy.start))).assertTrue();
       }
-      expect(await componentExists(driver, ON.text('停止扫描'))).assertTrue();
+      expect(await componentExists(driver, ON.text(copy.stop))).assertTrue();
       await rotateToLandscape(driver);
-      const stopNow = await driver.findComponents(ON.text('停止扫描'));
-      const startNow = await driver.findComponents(ON.text('开始扫描'));
+      const stopNow = await driver.findComponents(ON.text(copy.stop));
+      const startNow = await driver.findComponents(ON.text(copy.start));
       expect(stopNow != null && stopNow.length > 0).assertTrue();
       expect(startNow == null || startNow.length === 0).assertTrue();
-      await driver.waitForComponent(ON.text('开始扫描'), 40000);
-      const stopLater = await driver.findComponents(ON.text('停止扫描'));
+      await driver.waitForComponent(ON.text(copy.start), 40000);
+      const stopLater = await driver.findComponents(ON.text(copy.stop));
       expect(stopLater == null || stopLater.length === 0).assertTrue();
       await driver.setDisplayRotation(DisplayRotation.ROTATION_0);
       await driver.delayMs(PAGE_WAIT_MS);
-      expect(await componentExists(driver, ON.text('开始扫描'))).assertTrue();
-      const stopPortrait = await driver.findComponents(ON.text('停止扫描'));
+      expect(await componentExists(driver, ON.text(copy.start))).assertTrue();
+      const stopPortrait = await driver.findComponents(ON.text(copy.stop));
       expect(stopPortrait == null || stopPortrait.length === 0).assertTrue();
       done();
     });
 
     it('inventoryScanControlsReachable', 0, async (done: Function) => {
-      await existThenClick(driver, ON.text('发现附近设备'));
+      await existThenClick(driver, ON.text(copy.discover));
       await sleep(PAGE_WAIT_MS);
-      const hasTitle = await componentExists(driver, ON.text('附近设备'));
+      await existThenClick(driver, ON.text(copy.start));
+      await allowBluetoothIfShown(driver);
+      await sleep(PAGE_WAIT_MS);
+      const hasTitle = await componentExists(driver, ON.text(copy.nearby));
       expect(hasTitle).assertTrue();
-      const hasStop = await componentExists(driver, ON.text('停止扫描'));
-      const hasRescan = await componentExists(driver, ON.text('再次扫描'));
-      const hasStart = await componentExists(driver, ON.text('开始扫描'));
+      const hasStop = await componentExists(driver, ON.text(copy.stop));
+      const hasRescan = await componentExists(driver, ON.text(copy.rescan));
+      const hasStart = await componentExists(driver, ON.text(copy.start));
       expect(hasStop || hasRescan || hasStart).assertTrue();
       done();
     });
@@ -197,36 +260,36 @@ export default function agcAuditFlowTest() {
     it('sphereTapDragKeepsNearbyChrome', 0, async (done: Function) => {
       await driver.setDisplayRotation(DisplayRotation.ROTATION_0);
       await driver.delayMs(UI_WAIT_MS);
-      await ensureInventoryPage(driver);
-      expect(await componentExists(driver, ON.text('附近设备'))).assertTrue();
+      await ensureInventoryPage(driver, copy);
+      expect(await componentExists(driver, ON.text(copy.nearby))).assertTrue();
 
-      if (!(await componentExistsWithin(driver, ON.text('从列表选择设备'), 1500)) &&
-        !(await componentExistsWithin(driver, ON.text('停止扫描'), 800))) {
-        await existThenClick(driver, ON.text('开始扫描'));
-        await componentExistsWithin(driver, ON.text('从列表选择设备'), FIND_TIMEOUT_MS);
+      if (!(await componentExistsWithin(driver, ON.text(copy.picker), 1500)) &&
+        !(await componentExistsWithin(driver, ON.text(copy.stop), 800))) {
+        await existThenClick(driver, ON.text(copy.start));
+        await componentExistsWithin(driver, ON.text(copy.picker), FIND_TIMEOUT_MS);
       }
 
-      const title = await driver.findComponent(ON.text('附近设备'));
+      const title = await driver.findComponent(ON.text(copy.nearby));
       const titleBounds = await title.getBounds();
       const midX = Math.round((titleBounds.left + titleBounds.right) / 2);
       const radarY = Math.round(titleBounds.bottom + 260);
       await driver.click(Math.max(0, midX), Math.max(0, radarY));
 
-      let hintGone = await waitUntilAbsent(driver, '点击光点查看设备信息', FIND_TIMEOUT_MS);
+      let hintGone = await waitUntilAbsent(driver, copy.tapHint, FIND_TIMEOUT_MS);
       if (!hintGone) {
-        const opened = await existThenClick(driver, ON.text('从列表选择设备'));
+        const opened = await existThenClick(driver, ON.text(copy.picker));
         if (opened) {
-          await componentExistsWithin(driver, ON.text('选择设备'), FIND_TIMEOUT_MS);
+          await componentExistsWithin(driver, ON.text(copy.chooseDevice), FIND_TIMEOUT_MS);
           await clickFirstListedDevice(driver);
           await sleep(UI_WAIT_MS);
         }
-        hintGone = await waitUntilAbsent(driver, '点击光点查看设备信息', 4000);
+        hintGone = await waitUntilAbsent(driver, copy.tapHint, 4000);
       }
       const listVisible = await anyMockDeviceVisible(driver);
       expect(hintGone || listVisible).assertTrue();
 
-      if (await componentExistsWithin(driver, ON.text('选择设备'), 800)) {
-        await existThenClick(driver, ON.text('关闭'));
+      if (await componentExistsWithin(driver, ON.text(copy.chooseDevice), 800)) {
+        await existThenClick(driver, ON.text(copy.close));
       }
 
       try {
@@ -234,17 +297,17 @@ export default function agcAuditFlowTest() {
         await driver.swipe(Math.max(8, midX), Math.max(0, panY), Math.max(8, midX) + 120, Math.max(0, panY), 700);
       } catch (_err) {
       }
-      expect(await componentExists(driver, ON.text('附近设备'))).assertTrue();
-      const hasStop = await componentExists(driver, ON.text('停止扫描'));
-      const hasStart = await componentExists(driver, ON.text('开始扫描'));
+      expect(await componentExists(driver, ON.text(copy.nearby))).assertTrue();
+      const hasStop = await componentExists(driver, ON.text(copy.stop));
+      const hasStart = await componentExists(driver, ON.text(copy.start));
       expect(hasStop || hasStart).assertTrue();
-      const hasPicker = await componentExistsWithin(driver, ON.text('从列表选择设备'), 2000);
-      const hasEmpty = await componentExistsWithin(driver, ON.text('点击光点查看设备信息'), 1500);
+      const hasPicker = await componentExistsWithin(driver, ON.text(copy.picker), 2000);
+      const hasEmpty = await componentExistsWithin(driver, ON.text(copy.tapHint), 1500);
       expect(hasPicker || hasEmpty || hintGone).assertTrue();
-      if (await componentExistsWithin(driver, ON.text('选择设备'), 800)) {
-        await existThenClick(driver, ON.text('关闭'));
+      if (await componentExistsWithin(driver, ON.text(copy.chooseDevice), 800)) {
+        await existThenClick(driver, ON.text(copy.close));
       }
-      const backed = await existThenClick(driver, ON.text('返回'));
+      const backed = await existThenClick(driver, ON.text(copy.back));
       if (!backed) {
         await existThenClick(driver, ON.text('‹'));
       }
@@ -253,20 +316,20 @@ export default function agcAuditFlowTest() {
     });
 
     it('landscapeKeepsScanControlsAndRightDetail', 0, async (done: Function) => {
-      await ensureInventoryPage(driver);
+      await ensureInventoryPage(driver, copy);
       await rotateToLandscape(driver);
       const rotation = await driver.getDisplayRotation();
       expect(rotation === DisplayRotation.ROTATION_90).assertTrue();
 
-      expect(await componentExists(driver, ON.text('附近设备'))).assertTrue();
-      const hasStop = await componentExists(driver, ON.text('停止扫描'));
-      const hasStart = await componentExists(driver, ON.text('开始扫描'));
+      expect(await componentExists(driver, ON.text(copy.nearby))).assertTrue();
+      const hasStop = await componentExists(driver, ON.text(copy.stop));
+      const hasStart = await componentExists(driver, ON.text(copy.start));
       expect(hasStop || hasStart).assertTrue();
-      const stopNow = await driver.findComponents(ON.text('停止扫描'));
-      const actionLabel = (stopNow != null && stopNow.length > 0) ? '停止扫描' : '开始扫描';
+      const stopNow = await driver.findComponents(ON.text(copy.stop));
+      const actionLabel = (stopNow != null && stopNow.length > 0) ? copy.stop : copy.start;
       const action = await driver.findComponent(ON.text(actionLabel));
-      const detail = await driver.findComponent(ON.text('点击光点查看设备信息'));
-      const legend = await driver.findComponent(ON.text('蓝牙'));
+      const detail = await driver.findComponent(ON.text(copy.tapHint));
+      const legend = await driver.findComponent(ON.text(copy.ble));
       const actionBounds = await action.getBounds();
       const detailBounds = await detail.getBounds();
       const legendBounds = await legend.getBounds();
