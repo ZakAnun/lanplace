@@ -133,14 +133,26 @@ if not tap_first(layout, "返回", wait=1.5):
 snap_png(OUT / "01-首页.png")
 
 layout = pull_layout()
-tap_first(layout, "发现附近设备", wait=2.5)
+tap_first(layout, "发现附近设备", wait=3.5)
+layout = pull_layout()
+tap_first(layout, "允许", "Allow", "使用期间允许", wait=1.5)
 snap_png(OUT / "02-附近设备-进入.png")
-time.sleep(4)
+time.sleep(5)
 snap_png(OUT / "03-附近设备-已发现.png")
 
 layout = pull_layout()
 tap_first(layout, "从列表选择", wait=1.5)
 snap_png(OUT / "04-设备选择列表.png")
+
+layout = pull_layout()
+picked = False
+for text, x, y in find_clickable_text(layout, "键盘", "温湿度", "打印机", "客厅"):
+    print(f"tap device: {text} @ {x},{y}")
+    click(x, y, 1.5)
+    picked = True
+    break
+if picked:
+    snap_png(OUT / "06-设备详情.png")
 
 print("done", OUT)
 PY

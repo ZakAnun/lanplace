@@ -55,10 +55,7 @@ struct HomeInventory {
     this.radarActive = true;
     ScanUiLabels.load(this.abilityContext());
     this.syncPageOrientation(this.pageAreaWidth, this.pageAreaHeight);
-    this.startInventoryScan().catch(() => {
-      this.phase = InventoryUiPhase.Results;
-      this.prompt().showToast({ message: $r('app.string.toast_action_failed') });
-    });
+    this.refreshWifiSsid();
   }
 
   aboutToDisappear(): void {
@@ -133,33 +130,24 @@ struct HomeInventory {
       }
 
       const useMockBle = BleScanCoordinator.useMockScan();
-      let enableBleScan = useMockBle;
-      let enableLanScan = useMockBle;
+      const btGranted = await this.ensureBluetoothPermission(context);
+      if (!this.pageAlive) {
+        return;
+      }
 
-      if (!useMockBle) {
-        if (!BluetoothHelper.isEnabled()) {
-          this.prompt().showToast({ message: $r('app.string.toast_bluetooth_off') });
-        } else {
-          const btGranted = await this.ensureBluetoothPermission(context);
-          if (!this.pageAlive) {
-            return;
-          }
-          enableBleScan = btGranted;
-        }
+      let enableBleScan = btGranted;
+      if (btGranted && !useMockBle && !BluetoothHelper.isEnabled()) {
+        this.prompt().showToast({ message: $r('app.string.toast_bluetooth_off') });
+        enableBleScan = false;
+      }
 
-        await this.refreshWifiSsid();
-        if (!this.pageAlive) {
-          return;
-        }
-        enableLanScan = WifiNetworkHelper.isWifiLinked();
-        if (!enableLanScan) {
-          this.prompt().showToast({ message: $r('app.string.toast_wifi_only_ble') });
-        }
-      } else {
-        await this.refreshWifiSsid();
-        if (!this.pageAlive) {
-          return;
-        }
+      await this.refreshWifiSsid();
+      if (!this.pageAlive) {
+        return;
+      }
+      let enableLanScan = useMockBle ? true : WifiNetworkHelper.isWifiLinked();
+      if (!enableLanScan && !useMockBle && enableBleScan) {
+        this.prompt().showToast({ message: $r('app.string.toast_wifi_only_ble') });
       }
 
       if (!enableBleScan && !enableLanScan) {
