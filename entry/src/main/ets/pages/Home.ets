@@ -1,7 +1,7 @@
 import { common, Want } from '@kit.AbilityKit';
 import { PromptAction, router } from '@kit.ArkUI';
 import { AppleTheme } from '../common/AppleTheme';
-import { PRIVACY_POLICY_URL } from '../common/Constants';
+import { privacyPolicyUrlForLanguage } from '../common/Constants';
 import { PrivacyConsentHelper } from '../common/PrivacyConsentHelper';
 import { BleDiscoveryRadar } from '../components/BleDiscoveryRadar';
 import { PrivacyConsentDialog } from '../components/PrivacyConsentDialog';
@@ -43,9 +43,7 @@ struct Home {
       builder: PrivacyConsentDialog({
         onAgree: () => {
           this.privacyDialogController?.close();
-          PrivacyConsentHelper.setPrivacyAccepted(context, true).then(() => {
-            this.openHomeInventory();
-          }).catch(() => {
+          PrivacyConsentHelper.setPrivacyAccepted(context, true).catch(() => {
             this.prompt().showToast({ message: $r('app.string.toast_privacy_save_failed') });
           });
         },
@@ -82,7 +80,7 @@ struct Home {
     const want: Want = {
       action: 'ohos.want.action.viewData',
       entities: ['entity.system.browsable'],
-      uri: PRIVACY_POLICY_URL
+      uri: privacyPolicyUrlForLanguage(this.abilityContext().config.language)
     };
     this.abilityContext().startAbility(want).catch(() => {
       this.prompt().showToast({ message: $r('app.string.toast_open_policy_failed') });

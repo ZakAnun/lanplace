@@ -10,6 +10,7 @@ import sphereCameraMathTest from './SphereCameraMath.test';
 import inventoryDeviceMergeTest from './InventoryDeviceMerge.test';
 import permissionPurposeTest from './PermissionPurpose.test';
 import scanUiLabelsTest from './ScanUiLabels.test';
+import privacyDialogLayoutTest from './PrivacyDialogLayout.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -24,4 +25,5 @@ export default function testsuite() {
   deviceEnvironmentTest();
   permissionPurposeTest();
   scanUiLabelsTest();
+  privacyDialogLayoutTest();
 }
