@@ -8,6 +8,7 @@ import devicePickerSheetLayoutTest from './DevicePickerSheetLayout.test';
 import agcAuditLayoutTest from './AgcAuditLayout.test';
 import sphereCameraMathTest from './SphereCameraMath.test';
 import inventoryDeviceMergeTest from './InventoryDeviceMerge.test';
+import permissionPurposeTest from './PermissionPurpose.test';
 import scanUiLabelsTest from './ScanUiLabels.test';
 
 export default function testsuite() {
@@ -21,5 +22,6 @@ export default function testsuite() {
   radarOrbitGeometryTest();
   devicePickerSheetLayoutTest();
   deviceEnvironmentTest();
+  permissionPurposeTest();
   scanUiLabelsTest();
 }

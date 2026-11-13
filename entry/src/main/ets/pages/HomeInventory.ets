@@ -3,6 +3,7 @@ import { PromptAction, router } from '@kit.ArkUI';
 import { AppleTheme } from '../common/AppleTheme';
 import { BluetoothHelper } from '../common/BluetoothHelper';
 import { PermissionHelper } from '../common/PermissionHelper';
+import { nextBluetoothPermissionStep } from '../common/PermissionPurpose';
 import { ScanUiLabels } from '../common/ScanUiLabels';
 import { PrivacyConsentHelper } from '../common/PrivacyConsentHelper';
 import { WifiNetworkHelper } from '../common/WifiNetworkHelper';
@@ -32,6 +33,7 @@ struct HomeInventory {
   @StorageLink(WindowLayoutStore.HEIGHT_KEY) @Watch('onWindowMetricsChanged') mainWindowHeight: number = 0;
   private actionInFlight: boolean = false;
   private pageAlive: boolean = true;
+  private bluetoothAskAttempted: boolean = false;
 
   private abilityContext(): common.UIAbilityContext {
     return this.getUIContext().getHostContext() as common.UIAbilityContext;
@@ -85,20 +87,15 @@ struct HomeInventory {
     if (await PermissionHelper.hasBluetoothPermission(context)) {
       return true;
     }
-    const preface = await this.prompt().showDialog({
-      title: $r('app.string.dialog_bluetooth_title'),
-      message: $r('app.string.dialog_bluetooth_message'),
-      buttons: [
-        { text: $r('app.string.dialog_btn_cancel'), color: AppleTheme.INK_MUTED },
-        { text: $r('app.string.dialog_btn_continue'), color: AppleTheme.PRIMARY }
-      ]
-    });
-    if (preface.index !== 1) {
-      return false;
-    }
-    let granted = await PermissionHelper.requestBluetoothPermission(context);
-    if (granted) {
+    const ask = await PermissionHelper.requestBluetoothPermission(context);
+    if (ask.granted) {
       return true;
+    }
+    const step = nextBluetoothPermissionStep(ask.granted, ask.dialogShown, this.bluetoothAskAttempted);
+    this.bluetoothAskAttempted = true;
+    if (step === 'wait') {
+      this.prompt().showToast({ message: $r('app.string.toast_bluetooth_permission') });
+      return false;
     }
     const goSetting = await this.prompt().showDialog({
       title: $r('app.string.dialog_bluetooth_denied_title'),
@@ -111,7 +108,7 @@ struct HomeInventory {
     if (goSetting.index !== 1) {
       return false;
     }
-    granted = await PermissionHelper.requestBluetoothPermissionFromSetting(context);
+    const granted = await PermissionHelper.requestBluetoothPermissionFromSetting(context);
     if (!granted) {
       this.prompt().showToast({ message: $r('app.string.toast_bluetooth_permission_denied') });
     }
