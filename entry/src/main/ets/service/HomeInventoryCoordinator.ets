@@ -6,6 +6,7 @@ import {
 } from '../model/HomeInventoryDevice';
 import { ScannedDevice } from '../model/ScannedDevice';
 import { bleInventoryKey } from '../common/InventoryDeviceMerge';
+import { ScanUiLabels } from '../common/ScanUiLabels';
 import { BleScanCoordinator } from './BleScanCoordinator';
 import { BLE_SCAN_STOP_QUIET } from './BleScanService';
 import { LanDiscoveredDevice, MdnsScanService } from './MdnsScanService';
@@ -32,7 +33,7 @@ export class HomeInventoryCoordinator {
       merged.push({
         deviceKey: bleInventoryKey(d.deviceId),
         kind: InventoryDeviceKind.Ble,
-        displayName: d.displayName.length > 0 ? d.displayName : '未知蓝牙设备',
+        displayName: d.displayName.length > 0 ? d.displayName : ScanUiLabels.unknownBleDevice,
         detailLine: d.detailLine,
         extraLine: d.advertSummary,
         rssi: d.rssi
@@ -69,6 +70,7 @@ export class HomeInventoryCoordinator {
     if (HomeInventoryCoordinator.running) {
       return false;
     }
+    ScanUiLabels.load(context);
     HomeInventoryCoordinator.onUpdate = onUpdate;
     HomeInventoryCoordinator.onComplete = onComplete ?? (() => {});
     HomeInventoryCoordinator.bleDevices = [];

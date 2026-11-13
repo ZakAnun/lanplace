@@ -1,3 +1,4 @@
+import { ScanUiLabels } from '../common/ScanUiLabels';
 import { DeviceLinkState, ScannedDevice } from '../model/ScannedDevice';
 import { SCAN_TIMEOUT_MS } from '../common/Constants';
 import { BLE_SCAN_STOP_WITH_COMPLETE, BleScanStopOptions } from './BleScanStopOptions';
@@ -33,7 +34,7 @@ const MOCK_CATALOG: MockTemplate[] = [
     displayName: 'Beacon-Gateway',
     rssi: -71,
     connectable: false,
-    advertSummary: '仅广播 · SvcData 09:ff:…'
+    advertSummary: 'SvcData 09:ff:…'
   },
   {
     deviceId: 'AA:BB:CC:77:88:99',
@@ -87,7 +88,7 @@ export class MockBleScanService {
   }
 
   private static toDevice(t: MockTemplate, rssi: number): ScannedDevice {
-    const connLabel = t.connectable ? '可连接' : '仅广播';
+    const connLabel = ScanUiLabels.connectableLabel(t.connectable);
     return {
       deviceId: t.deviceId,
       displayName: t.displayName,
@@ -129,7 +130,7 @@ export class MockBleScanService {
       MockBleScanService.deviceMap.forEach((d, id) => {
         const jitter = Math.floor(Math.random() * 5) - 2;
         const rssi = Math.min(-40, Math.max(-85, d.rssi + jitter));
-        const connLabel = d.connectable ? '可连接' : '仅广播';
+        const connLabel = ScanUiLabels.connectableLabel(d.connectable);
         MockBleScanService.deviceMap.set(id, {
           deviceId: d.deviceId,
           displayName: d.displayName,

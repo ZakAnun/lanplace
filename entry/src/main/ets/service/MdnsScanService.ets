@@ -1,6 +1,7 @@
 import { common } from '@kit.AbilityKit';
 import { mdns } from '@kit.NetworkKit';
 import { DeviceEnvironment } from '../common/DeviceEnvironment';
+import { ScanUiLabels } from '../common/ScanUiLabels';
 
 export interface LanDiscoveredDevice {
   deviceKey: string;
@@ -69,7 +70,7 @@ export class MdnsScanService {
   }
 
   private static ingestResolvedService(serviceType: string, resolved: mdns.LocalServiceInfo): void {
-    const name = resolved.serviceName ?? '未知设备';
+    const name = resolved.serviceName ?? ScanUiLabels.unknownDevice;
     const host = resolved.host?.address ?? '';
     if (host.length === 0) {
       return;

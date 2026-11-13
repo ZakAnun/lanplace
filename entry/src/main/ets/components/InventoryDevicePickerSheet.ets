@@ -1,5 +1,6 @@
 import { AppleTheme } from '../common/AppleTheme';
 import { computeDevicePickerScrollHeightVp, PICKER_ROW_GAP_VP } from '../common/DevicePickerSheetLayout';
+import { ScanUiLabels } from '../common/ScanUiLabels';
 import { HomeInventoryDevice, InventoryDeviceKind } from '../model/HomeInventoryDevice';
 
 @Component
@@ -16,12 +17,9 @@ export struct InventoryDevicePickerSheet {
     return computeDevicePickerScrollHeightVp(this.devices.length, this.listMaxHeight);
   }
 
-  /** 与 inventory_a11y_pick_lan / inventory_a11y_pick_ble 文案一致（accessibilityText 仅接受 string） */
+  /** accessibilityText 仅接受 string，模板来自 inventory_a11y_pick_* */
   private rowA11yLabel(item: HomeInventoryDevice): string {
-    if (item.kind === InventoryDeviceKind.Lan) {
-      return `${item.displayName}，局域网`;
-    }
-    return `${item.displayName}，蓝牙`;
+    return ScanUiLabels.pickerA11y(item.displayName, item.kind === InventoryDeviceKind.Lan);
   }
 
   private accentColor(item: HomeInventoryDevice): string {

@@ -1,0 +1,280 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Scan and display nearby Bluetooth devices on this device, plus LAN services discovered via mDNS on the current Wi-Fi"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "BlueScopes home: nearby Bluetooth and LAN discovery. Results stay on this device"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "BlueScopes"
+    },
+    {
+      "name": "permission_bluetooth_reason",
+      "value": "Used to scan and display nearby Bluetooth devices."
+    },
+    {
+      "name": "home_title",
+      "value": "Nearby Bluetooth devices"
+    },
+    {
+      "name": "home_idle_caption",
+      "value": "Find nearby Bluetooth and Wi-Fi devices"
+    },
+    {
+      "name": "btn_start_scan",
+      "value": "Start scan"
+    },
+    {
+      "name": "btn_stop_scan",
+      "value": "Stop scan"
+    },
+    {
+      "name": "scanning_hint",
+      "value": "Searching nearby devices…"
+    },
+    {
+      "name": "browse_device_count",
+      "value": "%1$d nearby devices"
+    },
+    {
+      "name": "empty_list",
+      "value": "No devices found yet. Wait a moment or move closer"
+    },
+    {
+      "name": "radar_tap_hint",
+      "value": "Tap a dot to view device info"
+    },
+    {
+      "name": "label_privacy",
+      "value": "Privacy"
+    },
+    {
+      "name": "toast_mock_demo",
+      "value": "Demo mode: simulated nearby devices"
+    },
+    {
+      "name": "a11y_stop_scan",
+      "value": "Stop scan"
+    },
+    {
+      "name": "a11y_rescan",
+      "value": "Scan again"
+    },
+    {
+      "name": "a11y_start_scan",
+      "value": "Start scan"
+    },
+    {
+      "name": "a11y_home_inventory",
+      "value": "Open nearby device discovery"
+    },
+    {
+      "name": "a11y_privacy",
+      "value": "Privacy policy"
+    },
+    {
+      "name": "a11y_back",
+      "value": "Back"
+    },
+    {
+      "name": "btn_home_inventory",
+      "value": "Find nearby devices"
+    },
+    {
+      "name": "inventory_title",
+      "value": "Nearby devices"
+    },
+    {
+      "name": "inventory_scope_hint",
+      "value": "Nearby Bluetooth + devices on the current Wi-Fi"
+    },
+    {
+      "name": "inventory_scanning_hint",
+      "value": "Searching nearby Bluetooth and LAN devices…"
+    },
+    {
+      "name": "inventory_device_count",
+      "value": "Found %1$d devices"
+    },
+    {
+      "name": "inventory_empty",
+      "value": "No devices found. Move closer to Bluetooth devices; join Wi-Fi to find LAN devices on the same network"
+    },
+    {
+      "name": "inventory_wifi_ssid",
+      "value": "Current Wi-Fi: %1$s"
+    },
+    {
+      "name": "inventory_legend_ble",
+      "value": "Bluetooth"
+    },
+    {
+      "name": "inventory_legend_lan",
+      "value": "LAN"
+    },
+    {
+      "name": "inventory_rssi_line",
+      "value": "Signal %1$d dBm"
+    },
+    {
+      "name": "permission_internet_reason",
+      "value": "Used to discover LAN devices on the current Wi-Fi network."
+    },
+    {
+      "name": "permission_wifi_reason",
+      "value": "Used to show the current Wi-Fi name on the discovery page."
+    },
+    {
+      "name": "privacy_dialog_title",
+      "value": "Privacy policy"
+    },
+    {
+      "name": "privacy_dialog_body",
+      "value": "When you use nearby device discovery, BlueScopes scans nearby Bluetooth devices on this device and LAN devices advertised via mDNS on your current Wi-Fi (such as name, IP, and port), and reads the current Wi-Fi name for display. Bluetooth permission is used to scan and display nearby Bluetooth devices. Network permission is used to discover LAN devices on the current Wi-Fi. Wi-Fi information permission is used to show the current network name. This works indoors, outdoors, and on any network. Data stays on this device and is not uploaded. Please read the privacy policy before continuing."
+    },
+    {
+      "name": "privacy_dialog_open_policy",
+      "value": "View privacy policy"
+    },
+    {
+      "name": "privacy_dialog_decline",
+      "value": "Don't agree"
+    },
+    {
+      "name": "privacy_dialog_agree",
+      "value": "Agree and continue"
+    },
+    {
+      "name": "toast_privacy_save_failed",
+      "value": "Could not save privacy consent"
+    },
+    {
+      "name": "toast_open_policy_failed",
+      "value": "Could not open the privacy policy link"
+    },
+    {
+      "name": "toast_action_failed",
+      "value": "Action failed. Please try again"
+    },
+    {
+      "name": "toast_open_inventory_failed",
+      "value": "Could not open nearby device discovery"
+    },
+    {
+      "name": "toast_privacy_required",
+      "value": "Please agree to the privacy policy on the home screen first"
+    },
+    {
+      "name": "toast_bluetooth_off",
+      "value": "Turn on Bluetooth first"
+    },
+    {
+      "name": "toast_bluetooth_permission",
+      "value": "Bluetooth scan is not allowed. Other discoverable devices can still appear"
+    },
+    {
+      "name": "dialog_bluetooth_title",
+      "value": "Bluetooth permission"
+    },
+    {
+      "name": "dialog_bluetooth_message",
+      "value": "Used to scan and display nearby Bluetooth devices. Results stay on this device."
+    },
+    {
+      "name": "dialog_bluetooth_denied_title",
+      "value": "Bluetooth permission needed"
+    },
+    {
+      "name": "dialog_bluetooth_denied_message",
+      "value": "Scanning nearby Bluetooth devices needs this permission. You can try later or turn it on in Settings."
+    },
+    {
+      "name": "dialog_btn_cancel",
+      "value": "Cancel"
+    },
+    {
+      "name": "dialog_btn_continue",
+      "value": "Continue"
+    },
+    {
+      "name": "dialog_btn_go_settings",
+      "value": "Open Settings"
+    },
+    {
+      "name": "toast_bluetooth_permission_denied",
+      "value": "Bluetooth permission is still not granted"
+    },
+    {
+      "name": "toast_wifi_only_ble",
+      "value": "Not connected to Wi-Fi. Only Bluetooth devices will be scanned"
+    },
+    {
+      "name": "toast_scan_in_progress",
+      "value": "Scan already in progress"
+    },
+    {
+      "name": "toast_scan_start_failed",
+      "value": "Could not start scanning. Check Bluetooth, Wi-Fi, and permissions"
+    },
+    {
+      "name": "inventory_picker_sheet_title",
+      "value": "Choose a device"
+    },
+    {
+      "name": "btn_close_sheet",
+      "value": "Close"
+    },
+    {
+      "name": "inventory_picker_show",
+      "value": "Choose from list"
+    },
+    {
+      "name": "inventory_a11y_picker_show",
+      "value": "Choose from list. Opens the device picker"
+    },
+    {
+      "name": "inventory_kind_lan",
+      "value": "LAN"
+    },
+    {
+      "name": "inventory_kind_ble",
+      "value": "BT"
+    },
+    {
+      "name": "inventory_hub_near",
+      "value": "Near"
+    },
+    {
+      "name": "inventory_picker_empty",
+      "value": "No devices available"
+    },
+    {
+      "name": "inventory_a11y_pick_lan",
+      "value": "%1$s, LAN"
+    },
+    {
+      "name": "inventory_a11y_pick_ble",
+      "value": "%1$s, Bluetooth"
+    },
+    {
+      "name": "unknown_device",
+      "value": "Unknown device"
+    },
+    {
+      "name": "unknown_ble_device",
+      "value": "Unknown Bluetooth device"
+    },
+    {
+      "name": "adv_connectable",
+      "value": "Connectable"
+    },
+    {
+      "name": "adv_broadcast_only",
+      "value": "Broadcast only"
+    }
+  ]
+}

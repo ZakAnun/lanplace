@@ -17,8 +17,11 @@ export struct HomeInventoryDeviceInfoBar {
   /** 空状态左右内边距。默认 16vp；横屏右栏传 0，与通栏扫描按钮对齐。 */
   @Prop emptyStateHorizontalPadding: number = 16;
 
-  private kindLabel(): string {
-    return this.device.kind === InventoryDeviceKind.Lan ? '局域网' : '蓝牙';
+  private kindLabel(): Resource {
+    if (this.device.kind === InventoryDeviceKind.Lan) {
+      return $r('app.string.inventory_legend_lan');
+    }
+    return $r('app.string.inventory_legend_ble');
   }
 
   build() {

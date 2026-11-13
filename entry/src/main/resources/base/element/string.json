@@ -14,7 +14,7 @@
     },
     {
       "name": "permission_bluetooth_reason",
-      "value": "用于扫描并展示周围蓝牙设备"
+      "value": "用于扫描并展示周围蓝牙设备。"
     },
     {
       "name": "home_title",
@@ -122,11 +122,11 @@
     },
     {
       "name": "permission_internet_reason",
-      "value": "用于在同 Wi‑Fi 下发现局域网设备"
+      "value": "用于发现当前 Wi‑Fi 下的局域网设备。"
     },
     {
       "name": "permission_wifi_reason",
-      "value": "用于在发现页显示当前 Wi‑Fi 名称"
+      "value": "用于在发现页显示当前 Wi‑Fi 名称。"
     },
     {
       "name": "privacy_dialog_title",
@@ -134,7 +134,7 @@
     },
     {
       "name": "privacy_dialog_body",
-      "value": "蓝域（BlueScopes）会在您使用附近设备发现时，在本机扫描并展示周围蓝牙设备，以及您当前所连 Wi‑Fi 下通过 mDNS 主动宣告的局域网设备（如名称、IP、端口）；并读取当前 Wi‑Fi 名称以便展示。适用于室内、室外及任意网络环境，数据仅在本机显示、不上传。请阅读隐私政策后选择是否继续。"
+      "value": "蓝域（BlueScopes）会在您使用附近设备发现时，在本机扫描并展示周围蓝牙设备，以及您当前所连 Wi‑Fi 下通过 mDNS 主动宣告的局域网设备（如名称、IP、端口）；并读取当前 Wi‑Fi 名称以便展示。蓝牙权限用于扫描并展示周围蓝牙设备；网络权限用于发现当前 Wi‑Fi 下的局域网设备；Wi‑Fi 信息权限用于显示当前网络名称。适用于室内、室外及任意网络环境，数据仅在本机显示、不上传。请阅读隐私政策后选择是否继续。"
     },
     {
       "name": "privacy_dialog_open_policy",
@@ -174,7 +174,7 @@
     },
     {
       "name": "toast_bluetooth_permission",
-      "value": "需要蓝牙权限以扫描周围设备"
+      "value": "未授权蓝牙扫描，附近页仍可展示其他可发现设备"
     },
     {
       "name": "dialog_bluetooth_title",
@@ -182,7 +182,7 @@
     },
     {
       "name": "dialog_bluetooth_message",
-      "value": "需要蓝牙权限以扫描周围设备，数据仅在本机展示。"
+      "value": "用于扫描并展示周围蓝牙设备，扫描结果仅在本机显示。"
     },
     {
       "name": "dialog_bluetooth_denied_title",
@@ -259,6 +259,22 @@
     {
       "name": "inventory_a11y_pick_ble",
       "value": "%1$s，蓝牙"
+    },
+    {
+      "name": "unknown_device",
+      "value": "未知设备"
+    },
+    {
+      "name": "unknown_ble_device",
+      "value": "未知蓝牙设备"
+    },
+    {
+      "name": "adv_connectable",
+      "value": "可连接"
+    },
+    {
+      "name": "adv_broadcast_only",
+      "value": "仅广播"
     }
   ]
 }

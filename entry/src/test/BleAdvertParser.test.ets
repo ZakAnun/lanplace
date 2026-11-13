@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@ohos/hypium';
 import { mergeScanResult, parseAdvertData } from '../main/ets/common/BleAdvertParser';
+import { ScanUiLabels } from '../main/ets/common/ScanUiLabels';
 import { DeviceLinkState } from '../main/ets/model/ScannedDevice';
 
 export default function bleAdvertParserTest() {
@@ -43,6 +44,14 @@ export default function bleAdvertParserTest() {
       expect(merged.displayName).assertEqual('AdvName');
       expect(merged.rssi).assertEqual(-55);
       expect(merged.linkState).assertEqual(DeviceLinkState.Available);
+    });
+
+    it('mergeScanResult_uses_locale_fallback_name', 0, () => {
+      ScanUiLabels.unknownDevice = 'Unknown device';
+      ScanUiLabels.connectable = 'Connectable';
+      const merged = mergeScanResult('id-2', '', -70, true, new Uint8Array([]).buffer);
+      expect(merged.displayName).assertEqual('Unknown device');
+      expect(merged.detailLine).assertContain('Connectable');
     });
   });
 }

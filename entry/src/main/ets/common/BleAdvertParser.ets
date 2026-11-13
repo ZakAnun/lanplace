@@ -1,5 +1,6 @@
 import { util } from '@kit.ArkTS';
 import { DeviceLinkState, ScannedDevice } from '../model/ScannedDevice';
+import { ScanUiLabels } from './ScanUiLabels';
 
 const AD_TYPE_FLAGS = 0x01;
 const AD_TYPE_UUID16_INC = 0x02;
@@ -143,8 +144,8 @@ export function mergeScanResult(
   const parsed = parseAdvertData(data);
   const displayName = (deviceName && deviceName.length > 0)
     ? deviceName
-    : (parsed.localName && parsed.localName.length > 0 ? parsed.localName : '未知设备');
-  const connLabel = connectable ? '可连接' : '仅广播';
+    : (parsed.localName && parsed.localName.length > 0 ? parsed.localName : ScanUiLabels.unknownDevice);
+  const connLabel = ScanUiLabels.connectableLabel(connectable);
   const detailLine = `${deviceId} · ${rssi} dBm · ${connLabel}`;
   const parts: string[] = [];
   if (parsed.flags !== undefined) {

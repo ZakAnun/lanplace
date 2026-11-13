@@ -3,6 +3,7 @@ import { PromptAction, router } from '@kit.ArkUI';
 import { AppleTheme } from '../common/AppleTheme';
 import { BluetoothHelper } from '../common/BluetoothHelper';
 import { PermissionHelper } from '../common/PermissionHelper';
+import { ScanUiLabels } from '../common/ScanUiLabels';
 import { PrivacyConsentHelper } from '../common/PrivacyConsentHelper';
 import { WifiNetworkHelper } from '../common/WifiNetworkHelper';
 import { isLandscapeLayout } from '../common/RadarLayoutHelper';
@@ -50,6 +51,7 @@ struct HomeInventory {
   aboutToAppear(): void {
     this.pageAlive = true;
     this.radarActive = true;
+    ScanUiLabels.load(this.abilityContext());
     this.syncPageOrientation(this.pageAreaWidth, this.pageAreaHeight);
     this.startInventoryScan().catch(() => {
       this.phase = InventoryUiPhase.Results;
