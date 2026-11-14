@@ -303,6 +303,26 @@
     {
       "name": "workbench_tab_log",
       "value": "Log"
+    },
+    {
+      "name": "workbench_btn_connect",
+      "value": "Connect"
+    },
+    {
+      "name": "workbench_btn_disconnect",
+      "value": "Disconnect"
+    },
+    {
+      "name": "workbench_btn_open_gatt",
+      "value": "Open GATT debug"
+    },
+    {
+      "name": "workbench_status_disconnected",
+      "value": "Not connected"
+    },
+    {
+      "name": "workbench_status_connected",
+      "value": "Connected"
     }
   ]
 }

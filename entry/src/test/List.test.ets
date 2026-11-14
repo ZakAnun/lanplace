@@ -12,6 +12,7 @@ import permissionPurposeTest from './PermissionPurpose.test';
 import scanUiLabelsTest from './ScanUiLabels.test';
 import privacyDialogLayoutTest from './PrivacyDialogLayout.test';
 import workbenchTabPolicyTest from './WorkbenchTabPolicy.test';
+import workbenchShellStateTest from './WorkbenchShellState.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -28,4 +29,5 @@ export default function testsuite() {
   scanUiLabelsTest();
   privacyDialogLayoutTest();
   workbenchTabPolicyTest();
+  workbenchShellStateTest();
 }

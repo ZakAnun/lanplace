@@ -303,6 +303,26 @@
     {
       "name": "workbench_tab_log",
       "value": "日志"
+    },
+    {
+      "name": "workbench_btn_connect",
+      "value": "连接"
+    },
+    {
+      "name": "workbench_btn_disconnect",
+      "value": "断开"
+    },
+    {
+      "name": "workbench_btn_open_gatt",
+      "value": "打开 GATT 调试"
+    },
+    {
+      "name": "workbench_status_disconnected",
+      "value": "未连接"
+    },
+    {
+      "name": "workbench_status_connected",
+      "value": "已连接"
     }
   ]
 }

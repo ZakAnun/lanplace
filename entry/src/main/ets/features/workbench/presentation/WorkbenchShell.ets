@@ -1,92 +1,121 @@
 import { AppleTheme } from '../../../shared/theme/AppleTheme';
+import {
+  LANDSCAPE_RIGHT_RAIL_WIDTH,
+  isLandscapeLayout
+} from '../../../shared/layout/RadarLayoutHelper';
 import { InventoryDeviceKind } from '../../discovery/domain/HomeInventoryDevice';
 import { WorkbenchTabId, visibleTabs } from '../domain/WorkbenchTabPolicy';
+import {
+  WorkbenchShellState,
+  applyOpenGattDebug,
+  createWorkbenchShellState,
+  deriveConnectable,
+  selectWorkbenchTab
+} from '../domain/WorkbenchShellState';
+import { WorkbenchSegmentedBar } from './WorkbenchSegmentedBar';
+import { OverviewTab } from './tabs/OverviewTab';
 
 @Component
 export struct WorkbenchShell {
   @Prop deviceKey: string = '';
   @Prop kind: InventoryDeviceKind = InventoryDeviceKind.Ble;
   @Prop displayName: string = '';
+  @Prop detailLine: string = '';
+  @Prop initialTab: WorkbenchTabId = WorkbenchTabId.Overview;
   @State activeTab: WorkbenchTabId = WorkbenchTabId.Overview;
   @State gattConnected: boolean = false;
+  @State connectable: boolean = true;
+  @State pageLandscape: boolean = false;
+
+  aboutToAppear(): void {
+    const state: WorkbenchShellState = createWorkbenchShellState(
+      this.deviceKey,
+      this.kind,
+      this.displayName,
+      deriveConnectable(this.kind),
+      this.initialTab
+    );
+    this.connectable = state.connectable;
+    this.gattConnected = state.gattConnected;
+    this.activeTab = state.activeTab;
+  }
 
   private tabIds(): WorkbenchTabId[] {
     return visibleTabs(this.kind, this.gattConnected);
   }
 
-  @Builder
-  tabBar() {
-    Scroll() {
-      Row({ space: 6 }) {
-        ForEach(this.tabIds(), (tab: WorkbenchTabId) => {
-          Text(this.tabLabel(tab))
-            .fontSize(13)
-            .fontColor(this.activeTab === tab ? AppleTheme.PRIMARY : AppleTheme.INK_MUTED)
-            .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-            .backgroundColor(this.activeTab === tab ? AppleTheme.ROW_SELECTED : AppleTheme.CANVAS)
-            .borderRadius(AppleTheme.RADIUS_PILL)
-            .onClick(() => {
-              this.activeTab = tab;
-            })
-        }, (tab: WorkbenchTabId) => `${tab}`)
-      }
-      .padding({ left: 4, right: 4 })
+  private applyAreaSize(width: number, height: number): void {
+    if (width > 0 && height > 0) {
+      this.pageLandscape = isLandscapeLayout(width, height);
     }
-    .scrollable(ScrollDirection.Horizontal)
-    .scrollBar(BarState.Off)
+  }
+
+  private onSelectTab(tab: WorkbenchTabId): void {
+    const snapshot: WorkbenchShellState = {
+      deviceKey: this.deviceKey,
+      kind: this.kind,
+      displayName: this.displayName,
+      connectable: this.connectable,
+      gattConnected: this.gattConnected,
+      activeTab: this.activeTab
+    };
+    this.activeTab = selectWorkbenchTab(snapshot, tab).activeTab;
+  }
+
+  private onOpenGattDebug(): void {
+    this.activeTab = applyOpenGattDebug(this.gattConnected, this.activeTab);
+  }
+
+  @Builder
+  pageHeader() {
+    Row() {
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
+        Text('‹').fontSize(22).fontColor(AppleTheme.PRIMARY)
+      }
+      .width(40)
+      .height(40)
+      .backgroundColor(AppleTheme.CANVAS)
+      .border({ width: 1, color: AppleTheme.HAIRLINE })
+      .accessibilityText($r('app.string.a11y_back'))
+      .onClick(() => {
+        this.getUIContext().getRouter().back();
+      })
+      if (this.displayName.length > 0) {
+        Text(this.displayName)
+          .fontSize(18)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppleTheme.INK)
+          .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      } else {
+        Text($r('app.string.workbench_title'))
+          .fontSize(18)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppleTheme.INK)
+          .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+      }
+      Blank().width(40)
+    }
     .width('100%')
   }
 
-  private tabLabel(tab: WorkbenchTabId): Resource {
-    if (tab === WorkbenchTabId.Overview) {
-      return $r('app.string.workbench_tab_overview');
-    }
-    if (tab === WorkbenchTabId.Advert) {
-      return $r('app.string.workbench_tab_advert');
-    }
-    if (tab === WorkbenchTabId.Gatt) {
-      return $r('app.string.workbench_tab_gatt');
-    }
-    if (tab === WorkbenchTabId.Lan) {
-      return $r('app.string.workbench_tab_lan');
-    }
-    return $r('app.string.workbench_tab_log');
-  }
-
-  build() {
-    Column({ space: 12 }) {
-      Row() {
-        Button({ type: ButtonType.Circle, stateEffect: true }) {
-          Text('‹').fontSize(22).fontColor(AppleTheme.PRIMARY)
+  @Builder
+  tabContent() {
+    if (this.activeTab === WorkbenchTabId.Overview) {
+      OverviewTab({
+        kind: this.kind,
+        displayName: this.displayName,
+        detailLine: this.detailLine,
+        connectable: this.connectable,
+        gattConnected: this.gattConnected,
+        onOpenGattDebug: (): void => {
+          this.onOpenGattDebug();
         }
-        .width(40)
-        .height(40)
-        .backgroundColor(AppleTheme.CANVAS)
-        .border({ width: 1, color: AppleTheme.HAIRLINE })
-        .onClick(() => {
-          this.getUIContext().getRouter().back();
-        })
-        if (this.displayName.length > 0) {
-          Text(this.displayName)
-            .fontSize(18)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(AppleTheme.INK)
-            .layoutWeight(1)
-            .textAlign(TextAlign.Center)
-        } else {
-          Text($r('app.string.workbench_title'))
-            .fontSize(18)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(AppleTheme.INK)
-            .layoutWeight(1)
-            .textAlign(TextAlign.Center)
-        }
-        Blank().width(40)
-      }
-      .width('100%')
-
-      this.tabBar()
-
+      })
+    } else {
       Column({ space: 8 }) {
         Text($r('app.string.workbench_placeholder_body'))
           .fontSize(AppleTheme.FONT_BODY)
@@ -98,13 +127,75 @@ export struct WorkbenchShell {
             .fontFamily('HarmonyOS Sans')
         }
       }
+      .width('100%')
+      .height('100%')
+      .alignItems(HorizontalAlign.Start)
+      .padding(8)
+    }
+  }
+
+  @Builder
+  portraitBody() {
+    Column({ space: 12 }) {
+      WorkbenchSegmentedBar({
+        tabs: this.tabIds(),
+        activeTab: this.activeTab,
+        landscape: false,
+        kind: this.kind,
+        onSelect: (tab: WorkbenchTabId): void => {
+          this.onSelectTab(tab);
+        }
+      })
+      Column() {
+        this.tabContent()
+      }
       .layoutWeight(1)
       .width('100%')
-      .padding(8)
+    }
+    .width('100%')
+    .layoutWeight(1)
+  }
+
+  @Builder
+  landscapeBody() {
+    Row({ space: 12 }) {
+      WorkbenchSegmentedBar({
+        tabs: this.tabIds(),
+        activeTab: this.activeTab,
+        landscape: true,
+        kind: this.kind,
+        onSelect: (tab: WorkbenchTabId): void => {
+          this.onSelectTab(tab);
+        }
+      })
+        .width(LANDSCAPE_RIGHT_RAIL_WIDTH)
+        .height('100%')
+      Column() {
+        this.tabContent()
+      }
+      .layoutWeight(1)
+      .height('100%')
+    }
+    .width('100%')
+    .layoutWeight(1)
+    .alignItems(VerticalAlign.Top)
+  }
+
+  build() {
+    Column({ space: 12 }) {
+      this.pageHeader()
+      if (this.pageLandscape) {
+        this.landscapeBody()
+      } else {
+        this.portraitBody()
+      }
     }
     .padding({ left: 20, right: 20, top: 12, bottom: 24 })
     .width('100%')
     .height('100%')
     .backgroundColor(AppleTheme.CANVAS)
+    .onAreaChange((_old, area) => {
+      this.applyAreaSize(area.width as number, area.height as number);
+    })
   }
 }

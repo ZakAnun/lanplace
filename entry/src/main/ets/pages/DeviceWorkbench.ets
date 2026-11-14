@@ -4,6 +4,7 @@ import {
   HomeInventoryDevice,
   InventoryDeviceKind
 } from '../features/discovery/domain/HomeInventoryDevice';
+import { WorkbenchTabId } from '../features/workbench/domain/WorkbenchTabPolicy';
 import { WorkbenchShell } from '../features/workbench/presentation/WorkbenchShell';
 
 @Entry
@@ -12,6 +13,8 @@ struct DeviceWorkbench {
   @State deviceKey: string = '';
   @State kind: InventoryDeviceKind = InventoryDeviceKind.Ble;
   @State displayName: string = '';
+  @State detailLine: string = '';
+  @State initialTab: WorkbenchTabId = WorkbenchTabId.Overview;
 
   aboutToAppear(): void {
     const params = this.getUIContext().getRouter().getParams() as DeviceWorkbenchParams;
@@ -20,6 +23,9 @@ struct DeviceWorkbench {
     }
     if (params.deviceKey.length > 0) {
       this.deviceKey = params.deviceKey;
+    }
+    if (params.initialTab !== undefined) {
+      this.initialTab = params.initialTab;
     }
     this.resolveDeviceMeta();
   }
@@ -30,9 +36,11 @@ struct DeviceWorkbench {
       if (snapshot[i].deviceKey === this.deviceKey) {
         this.kind = snapshot[i].kind;
         this.displayName = snapshot[i].displayName;
+        this.detailLine = snapshot[i].detailLine;
         return;
       }
     }
+    this.detailLine = '';
     if (this.deviceKey.indexOf('lan:') === 0) {
       this.kind = InventoryDeviceKind.Lan;
     } else {
@@ -45,7 +53,9 @@ struct DeviceWorkbench {
       WorkbenchShell({
         deviceKey: this.deviceKey,
         kind: this.kind,
-        displayName: this.displayName
+        displayName: this.displayName,
+        detailLine: this.detailLine,
+        initialTab: this.initialTab
       })
         .width('100%')
         .height('100%')
