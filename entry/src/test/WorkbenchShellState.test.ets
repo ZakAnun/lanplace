@@ -1,5 +1,7 @@
-import { describe, it, expect } from '@ohos/hypium';
+import { describe, beforeEach, it, expect } from '@ohos/hypium';
 import { InventoryDeviceKind } from '../main/ets/features/discovery/domain/HomeInventoryDevice';
+import { GattConnectionRegistry } from '../main/ets/features/gatt/data/GattConnectionRegistry';
+import { GattFacade } from '../main/ets/features/gatt/domain/GattFacade';
 import { WorkbenchTabId } from '../main/ets/features/workbench/domain/WorkbenchTabPolicy';
 import {
   WorkbenchShellState,
@@ -13,7 +15,12 @@ import {
 
 export default function workbenchShellStateTest() {
   describe('WorkbenchShellState', () => {
-    it('resolveGattConnectedAlwaysFalse', 0, () => {
+    beforeEach(() => {
+      GattConnectionRegistry.clear();
+      GattFacade.resetFacade();
+    });
+
+    it('resolveGattConnectedFalseWhenNoConnectedSession', 0, () => {
       expect(resolveGattConnected('ble:AA:BB:CC:DD:EE:FF')).assertFalse();
       expect(resolveGattConnected('lan:host:192.168.1.8')).assertFalse();
     });

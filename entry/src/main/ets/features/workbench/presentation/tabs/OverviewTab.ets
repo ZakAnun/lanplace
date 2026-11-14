@@ -8,6 +8,7 @@ export struct OverviewTab {
   @Prop detailLine: string = '';
   @Prop connectable: boolean = false;
   @Prop gattConnected: boolean = false;
+  @Prop connecting: boolean = false;
   onConnect: () => void = (): void => {
   };
   onDisconnect: () => void = (): void => {
@@ -54,6 +55,11 @@ export struct OverviewTab {
         .onClick(() => {
           this.onOpenGattDebug();
         })
+    } else if (this.connecting) {
+      Text($r('app.string.workbench_status_connecting'))
+        .fontSize(AppleTheme.FONT_BODY)
+        .fontColor(AppleTheme.INK_MUTED)
+        .width('100%')
     } else {
       Button($r('app.string.workbench_btn_connect'))
         .type(ButtonType.Normal)
@@ -79,11 +85,22 @@ export struct OverviewTab {
           .fontColor(AppleTheme.INK)
           .width('100%')
       }
-      Text(this.gattConnected ? $r('app.string.workbench_status_connected') :
-        $r('app.string.workbench_status_disconnected'))
-        .fontSize(AppleTheme.FONT_CAPTION)
-        .fontColor(AppleTheme.INK_MUTED)
-        .width('100%')
+      if (this.connecting) {
+        Text($r('app.string.workbench_status_connecting'))
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+          .width('100%')
+      } else if (this.gattConnected) {
+        Text($r('app.string.workbench_status_connected'))
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+          .width('100%')
+      } else {
+        Text($r('app.string.workbench_status_disconnected'))
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+          .width('100%')
+      }
       if (this.connectable) {
         Text($r('app.string.adv_connectable'))
           .fontSize(AppleTheme.FONT_CAPTION)

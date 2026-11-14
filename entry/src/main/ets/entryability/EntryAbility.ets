@@ -6,6 +6,9 @@ import { WindowLayoutStore } from '../shared/layout/WindowLayoutStore';
 import { AdvertHistoryStore } from '../features/advert/data/AdvertHistoryStore';
 import { AdvertHistory } from '../features/advert/domain/AdvertHistory';
 import { HomeInventoryCoordinator } from '../features/discovery/data/HomeInventoryCoordinator';
+import { DefaultGattFacade } from '../features/gatt/data/DefaultGattFacade';
+import { HarmonyBleGattClient } from '../features/gatt/data/HarmonyBleGattClient';
+import { GattFacade } from '../features/gatt/domain/GattFacade';
 import { InMemoryLogStore } from '../features/session-log/data/InMemoryLogStore';
 import { LogEventBus } from '../features/session-log/domain/LogEventBus';
 
@@ -21,6 +24,7 @@ export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     LogEventBus.bindStore(new InMemoryLogStore());
     AdvertHistory.bindStore(new AdvertHistoryStore());
+    GattFacade.bindFacade(new DefaultGattFacade(new HarmonyBleGattClient()));
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
   }
 

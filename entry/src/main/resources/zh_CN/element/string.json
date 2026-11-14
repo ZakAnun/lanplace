@@ -407,6 +407,18 @@
     {
       "name": "workbench_advert_filter_none",
       "value": "未启用（显示全部）"
+    },
+    {
+      "name": "workbench_connected",
+      "value": "已连接"
+    },
+    {
+      "name": "workbench_status_connecting",
+      "value": "连接中…"
+    },
+    {
+      "name": "toast_gatt_max_connections",
+      "value": "已达本机连接上限，请先断开其他设备"
     }
   ]
 }

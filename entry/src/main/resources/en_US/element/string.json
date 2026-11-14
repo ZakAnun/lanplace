@@ -407,6 +407,18 @@
     {
       "name": "workbench_advert_filter_none",
       "value": "Off (showing all)"
+    },
+    {
+      "name": "workbench_connected",
+      "value": "Connected"
+    },
+    {
+      "name": "workbench_status_connecting",
+      "value": "Connecting…"
+    },
+    {
+      "name": "toast_gatt_max_connections",
+      "value": "Connection limit reached. Disconnect another device first."
     }
   ]
 }

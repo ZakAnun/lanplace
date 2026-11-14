@@ -1,4 +1,6 @@
+import { parseBleDeviceId } from '../../discovery/domain/DeviceWorkbenchParams';
 import { InventoryDeviceKind } from '../../discovery/domain/HomeInventoryDevice';
+import { GattFacade } from '../../gatt/domain/GattFacade';
 import { WorkbenchTabId, visibleTabs } from './WorkbenchTabPolicy';
 
 export interface WorkbenchShellState {
@@ -10,9 +12,12 @@ export interface WorkbenchShellState {
   activeTab: WorkbenchTabId;
 }
 
-/** Task 9 将接入 GattConnectionRegistry；M1 本步恒为未连接。 */
-export function resolveGattConnected(_deviceKey: string): boolean {
-  return false;
+export function resolveGattConnected(deviceKey: string): boolean {
+  const deviceId: string | undefined = parseBleDeviceId(deviceKey);
+  if (deviceId === undefined) {
+    return false;
+  }
+  return GattFacade.isConnected(deviceId);
 }
 
 export function deriveConnectable(kind: InventoryDeviceKind): boolean {

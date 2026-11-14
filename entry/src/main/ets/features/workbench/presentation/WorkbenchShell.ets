@@ -4,6 +4,12 @@ import {
   isLandscapeLayout
 } from '../../../shared/layout/RadarLayoutHelper';
 import { InventoryDeviceKind } from '../../discovery/domain/HomeInventoryDevice';
+import { parseBleDeviceId } from '../../discovery/domain/DeviceWorkbenchParams';
+import {
+  GATT_ERROR_MAX_CONNECTIONS,
+  GattFacade,
+  gattErrorCode
+} from '../../gatt/domain/GattFacade';
 import { WorkbenchTabId, visibleTabs } from '../domain/WorkbenchTabPolicy';
 import {
   WorkbenchShellState,
@@ -26,6 +32,7 @@ export struct WorkbenchShell {
   @Prop initialTab: WorkbenchTabId = WorkbenchTabId.Overview;
   @State activeTab: WorkbenchTabId = WorkbenchTabId.Overview;
   @State gattConnected: boolean = false;
+  @State gattConnecting: boolean = false;
   @State connectable: boolean = true;
   @State pageLandscape: boolean = false;
 
@@ -66,6 +73,54 @@ export struct WorkbenchShell {
 
   private onOpenGattDebug(): void {
     this.activeTab = applyOpenGattDebug(this.gattConnected, this.activeTab);
+  }
+
+  private onConnect(): void {
+    if (this.gattConnecting || this.gattConnected) {
+      return;
+    }
+    const deviceId: string | undefined = parseBleDeviceId(this.deviceKey);
+    if (deviceId === undefined) {
+      return;
+    }
+    this.gattConnecting = true;
+    GattFacade.connect(deviceId).then((): void => {
+      this.gattConnecting = false;
+      this.gattConnected = true;
+      this.getUIContext().getPromptAction().showToast({
+        message: $r('app.string.workbench_connected')
+      });
+    }).catch((err: Object): void => {
+      this.gattConnecting = false;
+      this.gattConnected = GattFacade.isConnected(deviceId);
+      if (gattErrorCode(err) === GATT_ERROR_MAX_CONNECTIONS) {
+        this.getUIContext().getPromptAction().showToast({
+          message: $r('app.string.toast_gatt_max_connections')
+        });
+        return;
+      }
+      this.getUIContext().getPromptAction().showToast({
+        message: $r('app.string.toast_action_failed')
+      });
+    });
+  }
+
+  private onDisconnect(): void {
+    const deviceId: string | undefined = parseBleDeviceId(this.deviceKey);
+    if (deviceId === undefined) {
+      return;
+    }
+    GattFacade.disconnect(deviceId).then((): void => {
+      this.gattConnecting = false;
+      this.gattConnected = false;
+      if (this.activeTab === WorkbenchTabId.Gatt) {
+        this.activeTab = WorkbenchTabId.Overview;
+      }
+    }).catch((): void => {
+      this.getUIContext().getPromptAction().showToast({
+        message: $r('app.string.toast_action_failed')
+      });
+    });
   }
 
   @Builder
@@ -113,6 +168,13 @@ export struct WorkbenchShell {
         detailLine: this.detailLine,
         connectable: this.connectable,
         gattConnected: this.gattConnected,
+        connecting: this.gattConnecting,
+        onConnect: (): void => {
+          this.onConnect();
+        },
+        onDisconnect: (): void => {
+          this.onDisconnect();
+        },
         onOpenGattDebug: (): void => {
           this.onOpenGattDebug();
         }
