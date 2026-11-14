@@ -14,6 +14,7 @@ import privacyDialogLayoutTest from './PrivacyDialogLayout.test';
 import workbenchTabPolicyTest from './WorkbenchTabPolicy.test';
 import workbenchShellStateTest from './WorkbenchShellState.test';
 import logEventBusTest from './LogEventBus.test';
+import rssiRingBufferTest from './RssiRingBuffer.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -32,4 +33,5 @@ export default function testsuite() {
   workbenchTabPolicyTest();
   workbenchShellStateTest();
   logEventBusTest();
+  rssiRingBufferTest();
 }

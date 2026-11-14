@@ -339,6 +339,22 @@
     {
       "name": "a11y_export_log",
       "value": "Export session log"
+    },
+    {
+      "name": "workbench_advert_empty",
+      "value": "No advertisement data yet"
+    },
+    {
+      "name": "workbench_advert_local_name",
+      "value": "Local name"
+    },
+    {
+      "name": "workbench_advert_rssi",
+      "value": "RSSI"
+    },
+    {
+      "name": "a11y_advert_rssi",
+      "value": "RSSI history chart"
     }
   ]
 }

@@ -339,6 +339,22 @@
     {
       "name": "a11y_export_log",
       "value": "导出日志"
+    },
+    {
+      "name": "workbench_advert_empty",
+      "value": "暂无广播记录"
+    },
+    {
+      "name": "workbench_advert_local_name",
+      "value": "本地名称"
+    },
+    {
+      "name": "workbench_advert_rssi",
+      "value": "RSSI"
+    },
+    {
+      "name": "a11y_advert_rssi",
+      "value": "RSSI 历史曲线"
     }
   ]
 }

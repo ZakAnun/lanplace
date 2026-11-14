@@ -1,4 +1,5 @@
 import { common } from '@kit.AbilityKit';
+import { AdvertHistory } from '../../advert/domain/AdvertHistory';
 import { SCAN_TIMEOUT_MS } from '../../../shared/platform/Constants';
 import {
   HomeInventoryDevice,
@@ -61,6 +62,19 @@ export class HomeInventoryCoordinator {
     HomeInventoryCoordinator.onUpdate(HomeInventoryCoordinator.mergeDevices());
   }
 
+  private static recordBleHistory(list: ScannedDevice[]): void {
+    const now: number = Date.now();
+    for (let i = 0; i < list.length; i++) {
+      const d: ScannedDevice = list[i];
+      const key: string = bleInventoryKey(d.deviceId);
+      AdvertHistory.push(key, now, d.rssi);
+      AdvertHistory.recordSnapshot(key, {
+        localName: d.displayName,
+        advertSummary: d.advertSummary
+      });
+    }
+  }
+
   private static clearTimer(): void {
     if (HomeInventoryCoordinator.endTimerId >= 0) {
       clearTimeout(HomeInventoryCoordinator.endTimerId);
@@ -94,6 +108,7 @@ export class HomeInventoryCoordinator {
         bleStarted = BleScanCoordinator.start(
           (list: ScannedDevice[]) => {
             HomeInventoryCoordinator.bleDevices = list.slice();
+            HomeInventoryCoordinator.recordBleHistory(list);
             HomeInventoryCoordinator.emitUpdate();
           },
           () => {

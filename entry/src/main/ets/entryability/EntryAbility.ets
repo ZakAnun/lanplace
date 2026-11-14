@@ -3,6 +3,8 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { AppleTheme } from '../shared/theme/AppleTheme';
 import { WindowLayoutStore } from '../shared/layout/WindowLayoutStore';
+import { AdvertHistoryStore } from '../features/advert/data/AdvertHistoryStore';
+import { AdvertHistory } from '../features/advert/domain/AdvertHistory';
 import { HomeInventoryCoordinator } from '../features/discovery/data/HomeInventoryCoordinator';
 import { InMemoryLogStore } from '../features/session-log/data/InMemoryLogStore';
 import { LogEventBus } from '../features/session-log/domain/LogEventBus';
@@ -18,6 +20,7 @@ export default class EntryAbility extends UIAbility {
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     LogEventBus.bindStore(new InMemoryLogStore());
+    AdvertHistory.bindStore(new AdvertHistoryStore());
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
   }
 
