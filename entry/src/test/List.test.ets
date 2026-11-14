@@ -17,6 +17,7 @@ import logEventBusTest from './LogEventBus.test';
 import rssiRingBufferTest from './RssiRingBuffer.test';
 import advertHistoryTest from './AdvertHistory.test';
 import scanFilterTest from './ScanFilter.test';
+import gattConnectionRegistryTest from './GattConnectionRegistry.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -38,4 +39,5 @@ export default function testsuite() {
   rssiRingBufferTest();
   advertHistoryTest();
   scanFilterTest();
+  gattConnectionRegistryTest();
 }
