@@ -1,8 +1,8 @@
-import { AppleTheme } from '../common/AppleTheme';
+import { AppleTheme } from '../../../shared/theme/AppleTheme';
 import {
   HomeInventoryDevice,
   InventoryDeviceKind
-} from '../model/HomeInventoryDevice';
+} from '../domain/HomeInventoryDevice';
 
 @Component
 export struct HomeInventoryDeviceInfoBar {

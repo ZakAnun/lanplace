@@ -3,7 +3,7 @@ import {
   PRIVACY_POLICY_URL,
   PRIVACY_POLICY_URL_EN,
   privacyPolicyUrlForLanguage
-} from '../main/ets/common/Constants';
+} from '../main/ets/shared/platform/Constants';
 import {
   computePrivacyBodyScrollMaxHeightVp,
   computePrivacyDialogMaxHeightVp,
@@ -11,7 +11,7 @@ import {
   PRIVACY_BODY_SCROLL_MAX_CAP_VP,
   PRIVACY_BODY_SCROLL_MIN_VP,
   PRIVACY_DIALOG_OUTER_MARGIN_VP
-} from '../main/ets/common/PrivacyDialogLayout';
+} from '../main/ets/shared/platform/PrivacyDialogLayout';
 
 export default function privacyDialogLayoutTest() {
   describe('PrivacyDialogLayout', () => {

@@ -1,5 +1,5 @@
-import { AppleTheme } from '../common/AppleTheme';
-import { DeviceLinkState, ScannedDevice } from '../model/ScannedDevice';
+import { AppleTheme } from '../../../shared/theme/AppleTheme';
+import { DeviceLinkState, ScannedDevice } from '../../../shared/ble/ScannedDevice';
 
 @Component
 export struct RadarDeviceInfoBar {

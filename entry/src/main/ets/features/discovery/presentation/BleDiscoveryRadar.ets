@@ -1,6 +1,6 @@
-import { AppleTheme } from '../common/AppleTheme';
-import { deviceSpherePointForIndex, ripplePhaseOffset } from '../common/RadarDeviceLayout';
-import { ScannedDevice } from '../model/ScannedDevice';
+import { AppleTheme } from '../../../shared/theme/AppleTheme';
+import { deviceSpherePointForIndex, ripplePhaseOffset } from '../../../shared/layout/RadarDeviceLayout';
+import { ScannedDevice } from '../../../shared/ble/ScannedDevice';
 
 interface ProjectedPoint {
   sx: number;

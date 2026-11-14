@@ -1,7 +1,7 @@
 import {
   HomeInventoryDevice,
   InventoryDeviceKind
-} from '../model/HomeInventoryDevice';
+} from './HomeInventoryDevice';
 
 export function bleInventoryKey(deviceId: string): string {
   return `ble:${deviceId}`;

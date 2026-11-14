@@ -1,4 +1,4 @@
-import { AppleTheme } from './AppleTheme';
+import { AppleTheme } from '../theme/AppleTheme';
 
 /** 设备列表 Scroll 区域高度上限（vp） */
 export const PICKER_LIST_MAX_CAP_VP: number = 360;

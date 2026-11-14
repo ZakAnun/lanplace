@@ -9,7 +9,7 @@ import {
   computeRadarCanvasSize,
   isLandscapeLayout,
   radarZoneWidth
-} from '../main/ets/common/RadarLayoutHelper';
+} from '../main/ets/shared/layout/RadarLayoutHelper';
 
 export default function agcAuditLayoutTest() {
   describe('AgcAuditLayout', () => {

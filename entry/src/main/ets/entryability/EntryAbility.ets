@@ -1,9 +1,9 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
-import { AppleTheme } from '../common/AppleTheme';
-import { WindowLayoutStore } from '../common/WindowLayoutStore';
-import { HomeInventoryCoordinator } from '../service/HomeInventoryCoordinator';
+import { AppleTheme } from '../shared/theme/AppleTheme';
+import { WindowLayoutStore } from '../shared/layout/WindowLayoutStore';
+import { HomeInventoryCoordinator } from '../features/discovery/data/HomeInventoryCoordinator';
 
 const DOMAIN = 0x0000;
 const WINDOW_BG: string = '#FF' + AppleTheme.CANVAS.slice(1);

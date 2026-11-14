@@ -1,18 +1,18 @@
 import { common } from '@kit.AbilityKit';
-import { PromptAction, router } from '@kit.ArkUI';
-import { AppleTheme } from '../common/AppleTheme';
-import { BluetoothHelper } from '../common/BluetoothHelper';
-import { PermissionHelper } from '../common/PermissionHelper';
-import { nextBluetoothPermissionStep } from '../common/PermissionPurpose';
-import { ScanUiLabels } from '../common/ScanUiLabels';
-import { PrivacyConsentHelper } from '../common/PrivacyConsentHelper';
-import { WifiNetworkHelper } from '../common/WifiNetworkHelper';
-import { isLandscapeLayout } from '../common/RadarLayoutHelper';
-import { WindowLayoutStore } from '../common/WindowLayoutStore';
-import { HomeInventoryPanel } from '../components/HomeInventoryPanel';
-import { HomeInventoryDevice } from '../model/HomeInventoryDevice';
-import { BleScanCoordinator } from '../service/BleScanCoordinator';
-import { HomeInventoryCoordinator } from '../service/HomeInventoryCoordinator';
+import { PromptAction } from '@kit.ArkUI';
+import { AppleTheme } from '../shared/theme/AppleTheme';
+import { BluetoothHelper } from '../shared/platform/BluetoothHelper';
+import { PermissionHelper } from '../shared/platform/PermissionHelper';
+import { nextBluetoothPermissionStep } from '../shared/platform/PermissionPurpose';
+import { ScanUiLabels } from '../shared/platform/ScanUiLabels';
+import { PrivacyConsentHelper } from '../shared/platform/PrivacyConsentHelper';
+import { WifiNetworkHelper } from '../shared/platform/WifiNetworkHelper';
+import { isLandscapeLayout } from '../shared/layout/RadarLayoutHelper';
+import { WindowLayoutStore } from '../shared/layout/WindowLayoutStore';
+import { HomeInventoryPanel } from '../features/discovery/presentation/HomeInventoryPanel';
+import { HomeInventoryDevice } from '../features/discovery/domain/HomeInventoryDevice';
+import { BleScanCoordinator } from '../features/discovery/data/BleScanCoordinator';
+import { HomeInventoryCoordinator } from '../features/discovery/data/HomeInventoryCoordinator';
 
 enum InventoryUiPhase {
   Scanning,
@@ -125,7 +125,7 @@ struct HomeInventory {
       }
       if (!accepted) {
         this.prompt().showToast({ message: $r('app.string.toast_privacy_required') });
-        router.back();
+        this.getUIContext().getRouter().back();
         return;
       }
 
@@ -222,6 +222,18 @@ struct HomeInventory {
     }
   }
 
+  private openDeviceWorkbench(deviceKey: string): void {
+    if (deviceKey.length === 0) {
+      return;
+    }
+    this.getUIContext().getRouter().pushUrl({
+      url: 'pages/DeviceWorkbench',
+      params: { deviceKey: deviceKey }
+    }).catch(() => {
+      this.prompt().showToast({ message: $r('app.string.toast_action_failed') });
+    });
+  }
+
   private syncPageOrientation(areaWidth: number, areaHeight: number): void {
     let width = areaWidth;
     let height = areaHeight;
@@ -246,7 +258,7 @@ struct HomeInventory {
       .border({ width: 1, color: AppleTheme.HAIRLINE })
       .accessibilityText($r('app.string.a11y_back'))
       .onClick(() => {
-        router.back();
+        this.getUIContext().getRouter().back();
       })
       Blank()
         .layoutWeight(1)
@@ -338,7 +350,10 @@ struct HomeInventory {
         isLandscapeLayout: this.pageLandscape,
         windowHeightVp: this.mainWindowHeightVp(),
         wifiSsid: this.wifiSsid,
-        landscapeScanAction: this.landscapeScanAction
+        landscapeScanAction: this.landscapeScanAction,
+        onOpenWorkbench: (deviceKey: string): void => {
+          this.openDeviceWorkbench(deviceKey);
+        }
       })
         .layoutWeight(1)
         .width('100%')

@@ -1,12 +1,12 @@
 import { common } from '@kit.AbilityKit';
-import { SCAN_TIMEOUT_MS } from '../common/Constants';
+import { SCAN_TIMEOUT_MS } from '../../../shared/platform/Constants';
 import {
   HomeInventoryDevice,
   InventoryDeviceKind
-} from '../model/HomeInventoryDevice';
-import { ScannedDevice } from '../model/ScannedDevice';
-import { bleInventoryKey } from '../common/InventoryDeviceMerge';
-import { ScanUiLabels } from '../common/ScanUiLabels';
+} from '../domain/HomeInventoryDevice';
+import { ScannedDevice } from '../../../shared/ble/ScannedDevice';
+import { bleInventoryKey } from '../domain/InventoryDeviceMerge';
+import { ScanUiLabels } from '../../../shared/platform/ScanUiLabels';
 import { BleScanCoordinator } from './BleScanCoordinator';
 import { BLE_SCAN_STOP_QUIET } from './BleScanService';
 import { LanDiscoveredDevice, MdnsScanService } from './MdnsScanService';
@@ -24,6 +24,10 @@ export class HomeInventoryCoordinator {
 
   static isScanning(): boolean {
     return HomeInventoryCoordinator.running;
+  }
+
+  static snapshotDevices(): HomeInventoryDevice[] {
+    return HomeInventoryCoordinator.mergeDevices();
   }
 
   private static mergeDevices(): HomeInventoryDevice[] {

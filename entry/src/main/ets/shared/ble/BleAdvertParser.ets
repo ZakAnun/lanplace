@@ -1,6 +1,6 @@
 import { util } from '@kit.ArkTS';
-import { DeviceLinkState, ScannedDevice } from '../model/ScannedDevice';
-import { ScanUiLabels } from './ScanUiLabels';
+import { DeviceLinkState, ScannedDevice } from './ScannedDevice';
+import { ScanUiLabels } from '../platform/ScanUiLabels';
 
 const AD_TYPE_FLAGS = 0x01;
 const AD_TYPE_UUID16_INC = 0x02;
@@ -63,7 +63,7 @@ function decodeUtf8Name(data: Uint8Array, offset: number, length: number): strin
   const slice = data.subarray(offset, offset + length);
   try {
     const decoder = util.TextDecoder.create('utf-8', { ignoreBOM: true });
-    return decoder.decodeWithStream(slice, { stream: false });
+    return decoder.decodeToString(slice);
   } catch (_err) {
     let s = '';
     for (let i = 0; i < length; i++) {

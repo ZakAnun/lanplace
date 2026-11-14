@@ -275,6 +275,34 @@
     {
       "name": "adv_broadcast_only",
       "value": "仅广播"
+    },
+    {
+      "name": "workbench_title",
+      "value": "设备工作台"
+    },
+    {
+      "name": "workbench_placeholder_body",
+      "value": "工作台内容将在此展示（概览 / 广播 / GATT / 网络 / 日志）。"
+    },
+    {
+      "name": "workbench_tab_overview",
+      "value": "概览"
+    },
+    {
+      "name": "workbench_tab_advert",
+      "value": "广播"
+    },
+    {
+      "name": "workbench_tab_gatt",
+      "value": "GATT"
+    },
+    {
+      "name": "workbench_tab_lan",
+      "value": "网络"
+    },
+    {
+      "name": "workbench_tab_log",
+      "value": "日志"
     }
   ]
 }

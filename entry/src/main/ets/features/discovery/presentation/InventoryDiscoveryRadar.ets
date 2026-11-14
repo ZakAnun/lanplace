@@ -16,17 +16,17 @@ import {
   UnlitMaterial,
   Vec4
 } from '@kit.ArkGraphics3D';
-import { AppleTheme } from '../common/AppleTheme';
+import { AppleTheme } from '../../../shared/theme/AppleTheme';
 import {
   deviceSpherePointForStableKey,
   goldenSpherePoint,
   ripplePhaseOffset,
   SPHERE_RADIUS,
   Vec3
-} from '../common/RadarDeviceLayout';
+} from '../../../shared/layout/RadarDeviceLayout';
 import {
   canvasLayoutScale
-} from '../common/RadarOrbitGeometry';
+} from '../../../shared/layout/RadarOrbitGeometry';
 import {
   applyOrbitPan,
   AUTO_ROTATE_YAW_SPEED,
@@ -47,11 +47,11 @@ import {
   sphereFacing,
   TAP_SLOP_VP,
   worldToCanvas
-} from '../common/SphereCameraMath';
+} from '../../../shared/layout/SphereCameraMath';
 import {
   HomeInventoryDevice,
   InventoryDeviceKind
-} from '../model/HomeInventoryDevice';
+} from '../domain/HomeInventoryDevice';
 
 interface ProjectedPoint {
   sx: number;

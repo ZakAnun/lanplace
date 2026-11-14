@@ -1,4 +1,4 @@
-import { AppleTheme } from './AppleTheme';
+import { AppleTheme } from '../theme/AppleTheme';
 
 /** 弹窗外上下各留出的边距（vp），避免贴齐状态栏/导航条 */
 export const PRIVACY_DIALOG_OUTER_MARGIN_VP: number = 32;

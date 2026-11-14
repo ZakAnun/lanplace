@@ -275,6 +275,34 @@
     {
       "name": "adv_broadcast_only",
       "value": "Broadcast only"
+    },
+    {
+      "name": "workbench_title",
+      "value": "Device workbench"
+    },
+    {
+      "name": "workbench_placeholder_body",
+      "value": "Workbench content appears here (Overview, Advert, GATT, Network, Log)."
+    },
+    {
+      "name": "workbench_tab_overview",
+      "value": "Overview"
+    },
+    {
+      "name": "workbench_tab_advert",
+      "value": "Advert"
+    },
+    {
+      "name": "workbench_tab_gatt",
+      "value": "GATT"
+    },
+    {
+      "name": "workbench_tab_lan",
+      "value": "Network"
+    },
+    {
+      "name": "workbench_tab_log",
+      "value": "Log"
     }
   ]
 }

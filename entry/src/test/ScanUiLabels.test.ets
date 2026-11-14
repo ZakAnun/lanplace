@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@ohos/hypium';
-import { ScanUiLabels } from '../main/ets/common/ScanUiLabels';
+import { ScanUiLabels } from '../main/ets/shared/platform/ScanUiLabels';
 
 export default function scanUiLabelsTest() {
   describe('ScanUiLabels', () => {

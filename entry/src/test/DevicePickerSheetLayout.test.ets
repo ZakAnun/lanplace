@@ -4,7 +4,7 @@ import {
   computeDevicePickerScrollHeightVp,
   devicePickerSheetChromeHeightVp,
   PICKER_LIST_MAX_CAP_VP
-} from '../main/ets/common/DevicePickerSheetLayout';
+} from '../main/ets/shared/layout/DevicePickerSheetLayout';
 
 export default function devicePickerSheetLayoutTest() {
   describe('DevicePickerSheetLayout', () => {

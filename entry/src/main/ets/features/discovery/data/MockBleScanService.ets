@@ -1,6 +1,6 @@
-import { ScanUiLabels } from '../common/ScanUiLabels';
-import { DeviceLinkState, ScannedDevice } from '../model/ScannedDevice';
-import { SCAN_TIMEOUT_MS } from '../common/Constants';
+import { ScanUiLabels } from '../../../shared/platform/ScanUiLabels';
+import { DeviceLinkState, ScannedDevice } from '../../../shared/ble/ScannedDevice';
+import { SCAN_TIMEOUT_MS } from '../../../shared/platform/Constants';
 import { BLE_SCAN_STOP_WITH_COMPLETE, BleScanStopOptions } from './BleScanStopOptions';
 
 type ScanCallback = (devices: ScannedDevice[]) => void;

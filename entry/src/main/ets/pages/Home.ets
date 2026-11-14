@@ -1,17 +1,17 @@
 import { common, Want } from '@kit.AbilityKit';
-import { PromptAction, router } from '@kit.ArkUI';
-import { AppleTheme } from '../common/AppleTheme';
-import { privacyPolicyUrlForLanguage } from '../common/Constants';
-import { PrivacyConsentHelper } from '../common/PrivacyConsentHelper';
-import { BleDiscoveryRadar } from '../components/BleDiscoveryRadar';
-import { PrivacyConsentDialog } from '../components/PrivacyConsentDialog';
+import { PromptAction } from '@kit.ArkUI';
+import { AppleTheme } from '../shared/theme/AppleTheme';
+import { privacyPolicyUrlForLanguage } from '../shared/platform/Constants';
+import { PrivacyConsentHelper } from '../shared/platform/PrivacyConsentHelper';
+import { BleDiscoveryRadar } from '../features/discovery/presentation/BleDiscoveryRadar';
+import { PrivacyConsentDialog } from '../features/discovery/presentation/PrivacyConsentDialog';
 import {
   computeRadarCanvasSize,
   isLandscapeLayout,
   LANDSCAPE_RIGHT_RAIL_WIDTH,
   radarZoneWidth
-} from '../common/RadarLayoutHelper';
-import { WindowLayoutStore } from '../common/WindowLayoutStore';
+} from '../shared/layout/RadarLayoutHelper';
+import { WindowLayoutStore } from '../shared/layout/WindowLayoutStore';
 
 @Entry
 @Component
@@ -174,7 +174,7 @@ struct Home {
   }
 
   private openHomeInventory(): void {
-    router.pushUrl({ url: 'pages/HomeInventory' }).catch(() => {
+    this.getUIContext().getRouter().pushUrl({ url: 'pages/HomeInventory' }).catch(() => {
       this.prompt().showToast({ message: $r('app.string.toast_open_inventory_failed') });
     });
   }

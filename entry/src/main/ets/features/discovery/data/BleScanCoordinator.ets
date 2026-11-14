@@ -1,6 +1,6 @@
-import { ENABLE_MOCK_BLE_SCAN } from '../common/Constants';
-import { DeviceEnvironment } from '../common/DeviceEnvironment';
-import { ScannedDevice } from '../model/ScannedDevice';
+import { ENABLE_MOCK_BLE_SCAN } from '../../../shared/platform/Constants';
+import { DeviceEnvironment } from '../../../shared/platform/DeviceEnvironment';
+import { ScannedDevice } from '../../../shared/ble/ScannedDevice';
 import { BleScanService, BleScanStopOptions } from './BleScanService';
 import { MockBleScanService } from './MockBleScanService';
 

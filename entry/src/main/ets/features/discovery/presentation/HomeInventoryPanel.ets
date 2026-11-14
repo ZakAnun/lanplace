@@ -1,12 +1,12 @@
-import { AppleTheme } from '../common/AppleTheme';
-import { selectionKeyIfStillPresent } from '../common/InventoryDeviceMerge';
-import { computeDevicePickerListMaxHeightVp } from '../common/DevicePickerSheetLayout';
+import { AppleTheme } from '../../../shared/theme/AppleTheme';
+import { selectionKeyIfStillPresent } from '../domain/InventoryDeviceMerge';
+import { computeDevicePickerListMaxHeightVp } from '../../../shared/layout/DevicePickerSheetLayout';
 import {
   computeRadarCanvasSize,
   LANDSCAPE_RIGHT_RAIL_WIDTH,
   radarZoneWidth
-} from '../common/RadarLayoutHelper';
-import { HomeInventoryDevice, InventoryDeviceKind } from '../model/HomeInventoryDevice';
+} from '../../../shared/layout/RadarLayoutHelper';
+import { HomeInventoryDevice, InventoryDeviceKind } from '../domain/HomeInventoryDevice';
 import { HomeInventoryDeviceInfoBar } from './HomeInventoryDeviceInfoBar';
 import { InventoryDiscoveryRadar } from './InventoryDiscoveryRadar';
 import { InventoryDevicePickerSheet } from './InventoryDevicePickerSheet';
@@ -25,6 +25,8 @@ export struct HomeInventoryPanel {
   @State radarCanvasSize: number = 280;
   @State showDevicePickerSheet: boolean = false;
   @BuilderParam landscapeScanAction: () => void = this.emptySlot;
+  onOpenWorkbench: (deviceKey: string) => void = (_deviceKey: string): void => {
+  };
 
   @Builder
   emptySlot() {
@@ -200,8 +202,10 @@ export struct HomeInventoryPanel {
       devices: this.devices,
       listMaxHeight: this.devicePickerListMaxHeight(),
       selectedDeviceKey: $selectedDeviceKey,
-      onPick: (): void => {
+      onPick: (deviceKey: string): void => {
+        this.selectedDeviceKey = deviceKey;
         this.closeDevicePickerSheet();
+        this.onOpenWorkbench(deviceKey);
       },
       onClose: (): void => {
         this.closeDevicePickerSheet();

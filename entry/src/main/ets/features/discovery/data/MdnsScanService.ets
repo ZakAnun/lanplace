@@ -1,7 +1,7 @@
 import { common } from '@kit.AbilityKit';
 import { mdns } from '@kit.NetworkKit';
-import { DeviceEnvironment } from '../common/DeviceEnvironment';
-import { ScanUiLabels } from '../common/ScanUiLabels';
+import { DeviceEnvironment } from '../../../shared/platform/DeviceEnvironment';
+import { ScanUiLabels } from '../../../shared/platform/ScanUiLabels';
 
 export interface LanDiscoveredDevice {
   deviceKey: string;

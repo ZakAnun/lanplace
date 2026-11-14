@@ -11,6 +11,7 @@ import inventoryDeviceMergeTest from './InventoryDeviceMerge.test';
 import permissionPurposeTest from './PermissionPurpose.test';
 import scanUiLabelsTest from './ScanUiLabels.test';
 import privacyDialogLayoutTest from './PrivacyDialogLayout.test';
+import workbenchTabPolicyTest from './WorkbenchTabPolicy.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -26,4 +27,5 @@ export default function testsuite() {
   permissionPurposeTest();
   scanUiLabelsTest();
   privacyDialogLayoutTest();
+  workbenchTabPolicyTest();
 }

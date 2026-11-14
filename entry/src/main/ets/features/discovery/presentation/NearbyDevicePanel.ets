@@ -1,10 +1,10 @@
-import { AppleTheme } from '../common/AppleTheme';
+import { AppleTheme } from '../../../shared/theme/AppleTheme';
 import {
   computeRadarCanvasSize,
   LANDSCAPE_RIGHT_RAIL_WIDTH,
   radarZoneWidth
-} from '../common/RadarLayoutHelper';
-import { DeviceLinkState, ScannedDevice } from '../model/ScannedDevice';
+} from '../../../shared/layout/RadarLayoutHelper';
+import { DeviceLinkState, ScannedDevice } from '../../../shared/ble/ScannedDevice';
 import { BleDiscoveryRadar } from './BleDiscoveryRadar';
 import { RadarDeviceInfoBar } from './RadarDeviceInfoBar';
 

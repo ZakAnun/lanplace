@@ -1,14 +1,14 @@
-import { AppleTheme } from '../common/AppleTheme';
-import { computeDevicePickerScrollHeightVp, PICKER_ROW_GAP_VP } from '../common/DevicePickerSheetLayout';
-import { ScanUiLabels } from '../common/ScanUiLabels';
-import { HomeInventoryDevice, InventoryDeviceKind } from '../model/HomeInventoryDevice';
+import { AppleTheme } from '../../../shared/theme/AppleTheme';
+import { computeDevicePickerScrollHeightVp, PICKER_ROW_GAP_VP } from '../../../shared/layout/DevicePickerSheetLayout';
+import { ScanUiLabels } from '../../../shared/platform/ScanUiLabels';
+import { HomeInventoryDevice, InventoryDeviceKind } from '../domain/HomeInventoryDevice';
 
 @Component
 export struct InventoryDevicePickerSheet {
   @Prop devices: HomeInventoryDevice[] = [];
   @Prop listMaxHeight: number = 360;
   @Link selectedDeviceKey: string;
-  onPick: () => void = (): void => {
+  onPick: (deviceKey: string) => void = (_deviceKey: string): void => {
   };
   onClose: () => void = (): void => {
   };
@@ -92,7 +92,7 @@ export struct InventoryDevicePickerSheet {
               .accessibilitySelected(this.selectedDeviceKey === item.deviceKey)
               .onClick(() => {
                 this.selectedDeviceKey = item.deviceKey;
-                this.onPick();
+                this.onPick(item.deviceKey);
               })
             }, (item: HomeInventoryDevice) => item.deviceKey)
           }

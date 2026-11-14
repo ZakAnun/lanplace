@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@ohos/hypium';
-import { isHuaweiPermissionReason, nextBluetoothPermissionStep } from '../main/ets/common/PermissionPurpose';
+import { isHuaweiPermissionReason, nextBluetoothPermissionStep } from '../main/ets/shared/platform/PermissionPurpose';
 
 export default function permissionPurposeTest() {
   describe('PermissionPurpose', () => {

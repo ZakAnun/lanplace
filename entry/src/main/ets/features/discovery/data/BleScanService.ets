@@ -1,8 +1,8 @@
 import { ble } from '@kit.ConnectivityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { mergeScanResult } from '../common/BleAdvertParser';
-import { ScannedDevice } from '../model/ScannedDevice';
-import { SCAN_TIMEOUT_MS } from '../common/Constants';
+import { mergeScanResult } from '../../../shared/ble/BleAdvertParser';
+import { ScannedDevice } from '../../../shared/ble/ScannedDevice';
+import { SCAN_TIMEOUT_MS } from '../../../shared/platform/Constants';
 import {
   BleScanStopOptions,
   BLE_SCAN_STOP_QUIET,

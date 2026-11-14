@@ -1,7 +1,7 @@
 import { describe, it, expect } from '@ohos/hypium';
-import { mergeScanResult, parseAdvertData } from '../main/ets/common/BleAdvertParser';
-import { ScanUiLabels } from '../main/ets/common/ScanUiLabels';
-import { DeviceLinkState } from '../main/ets/model/ScannedDevice';
+import { mergeScanResult, parseAdvertData } from '../main/ets/shared/ble/BleAdvertParser';
+import { ScanUiLabels } from '../main/ets/shared/platform/ScanUiLabels';
+import { DeviceLinkState } from '../main/ets/shared/ble/ScannedDevice';
 
 export default function bleAdvertParserTest() {
   describe('BleAdvertParser', () => {

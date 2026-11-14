@@ -10,7 +10,7 @@ import {
   maxDeviceVisualRadiusLayoutVp,
   orbitPushUnitVector,
   PHASE_DIRECTION_BLEND_FRAC
-} from '../main/ets/common/RadarOrbitGeometry';
+} from '../main/ets/shared/layout/RadarOrbitGeometry';
 
 export default function radarOrbitGeometryTest() {
   describe('RadarOrbitGeometry', () => {

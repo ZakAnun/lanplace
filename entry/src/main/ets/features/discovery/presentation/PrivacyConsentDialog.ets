@@ -1,9 +1,9 @@
-import { AppleTheme } from '../common/AppleTheme';
+import { AppleTheme } from '../../../shared/theme/AppleTheme';
 import {
   computePrivacyBodyScrollMaxHeightVp,
   computePrivacyDialogMaxHeightVp
-} from '../common/PrivacyDialogLayout';
-import { WindowLayoutStore } from '../common/WindowLayoutStore';
+} from '../../../shared/platform/PrivacyDialogLayout';
+import { WindowLayoutStore } from '../../../shared/layout/WindowLayoutStore';
 
 @CustomDialog
 export struct PrivacyConsentDialog {
