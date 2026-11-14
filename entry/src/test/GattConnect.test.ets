@@ -11,7 +11,17 @@ import {
 } from '../main/ets/features/gatt/domain/GattFacade';
 import { GattConnectionRegistry } from '../main/ets/features/gatt/data/GattConnectionRegistry';
 import { DefaultGattFacade } from '../main/ets/features/gatt/data/DefaultGattFacade';
-import { GattClock, IGattTransport, SystemGattClock } from '../main/ets/features/gatt/data/IGattTransport';
+import { GattClientHost } from '../main/ets/features/gatt/data/GattClientHost';
+import {
+  GATT_PROFILE_STATE_DISCONNECTED,
+  GattClock,
+  GattLinkStateCallback,
+  GattLinkStateEvent,
+  IGattClientFactory,
+  IGattClientHandle,
+  IGattTransport,
+  SystemGattClock
+} from '../main/ets/features/gatt/data/IGattTransport';
 import { LogEvent, LogEventDomain } from '../main/ets/features/session-log/domain/LogEvent';
 import { LogEventType } from '../main/ets/features/session-log/domain/LogEventType';
 import { LogEventBus } from '../main/ets/features/session-log/domain/LogEventBus';
@@ -51,13 +61,61 @@ class ManualGattClock implements GattClock {
   }
 }
 
-class ScriptedGattTransport implements IGattTransport {
+class ScriptedGattHandle implements IGattClientHandle {
+  disconnected: boolean = false;
+  closed: boolean = false;
+  private listener: GattLinkStateCallback | null = null;
+
+  connect(): void {
+  }
+
+  disconnect(): void {
+    this.disconnected = true;
+  }
+
+  close(): void {
+    this.closed = true;
+  }
+
+  getServices(): Promise<string[]> {
+    return new Promise<string[]>((_resolve: (value: string[]) => void): void => {
+    });
+  }
+
+  on(_type: string, callback: GattLinkStateCallback): void {
+    this.listener = callback;
+  }
+
+  off(_type: string, _callback: GattLinkStateCallback): void {
+    this.listener = null;
+  }
+
+  emitDisconnected(deviceId: string): void {
+    const listener: GattLinkStateCallback | null = this.listener;
+    if (listener === null) {
+      return;
+    }
+    const event: GattLinkStateEvent = {
+      deviceId: deviceId,
+      state: GATT_PROFILE_STATE_DISCONNECTED
+    };
+    listener(event);
+  }
+}
+
+class ScriptedGattTransport implements IGattTransport, IGattClientFactory {
   mode: string;
   cancelled: boolean = false;
   disconnected: boolean = false;
+  readonly handle: ScriptedGattHandle;
 
   constructor(mode: string) {
     this.mode = mode;
+    this.handle = new ScriptedGattHandle();
+  }
+
+  create(_deviceId: string): IGattClientHandle {
+    return this.handle;
   }
 
   connect(_deviceId: string): Promise<string[]> {
@@ -253,6 +311,22 @@ export default function gattConnectTest() {
       expect(connectLogs).assertEqual(0);
       expect(logs.length).assertEqual(1);
       expect(logs[0].type).assertEqual(LogEventType.GATT_ERROR);
+    });
+
+    it('disconnectWhileConnectingClosesClient', 0, async (): Promise<void> => {
+      const transport: ScriptedGattTransport = new ScriptedGattTransport('link');
+      const host: GattClientHost = new GattClientHost(transport);
+      let failed: boolean = false;
+      const pending: Promise<void> = host.connect(DEVICE_ID).then((): void => {
+        return;
+      }).catch((err: Object): void => {
+        failed = true;
+        expect(gattErrorCode(err)).assertEqual(-1);
+      });
+      transport.handle.emitDisconnected(DEVICE_ID);
+      await pending;
+      expect(failed).assertTrue();
+      expect(transport.handle.closed).assertTrue();
     });
 
     it('disconnectClearsConnectedPhaseAndAppendsGattDisconnect', 0, async (): Promise<void> => {
