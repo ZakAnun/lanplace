@@ -138,7 +138,7 @@
     },
     {
       "name": "privacy_dialog_body",
-      "value": "When you use nearby device discovery, BlueScopes scans nearby Bluetooth devices on this device and LAN devices advertised via mDNS on your current Wi-Fi (such as name, IP, and port), and reads the current Wi-Fi name for display. Bluetooth permission is used to scan and display nearby Bluetooth devices. Network permission is used to discover LAN devices on the current Wi-Fi. Wi-Fi information permission is used to show the current network name. This works indoors, outdoors, and on any network. Data stays on this device and is not uploaded. Please read the privacy policy before continuing."
+      "value": "When you use nearby device discovery, BlueScopes scans nearby Bluetooth devices on this device and LAN devices advertised via mDNS on your current Wi-Fi (such as name, IP, and port), and reads the current Wi-Fi name for display. A GATT connection starts only when you tap connect, and a LAN port or HTTP probe runs only when you start it. Session logs stay in memory on this device and are given to the system share sheet only when you export them. Bluetooth permission is used to scan nearby Bluetooth devices and to connect when you ask. Network permission is used to discover LAN devices on the current Wi-Fi and to run probes you start. Wi-Fi information permission is used to show the current network name. This works indoors, outdoors, and on any network. Data stays on this device and is not uploaded. Please read the privacy policy before continuing."
     },
     {
       "name": "privacy_dialog_open_policy",
@@ -327,6 +327,14 @@
     {
       "name": "workbench_status_connected",
       "value": "Connected"
+    },
+    {
+      "name": "workbench_status_lost",
+      "value": "Connection lost"
+    },
+    {
+      "name": "workbench_btn_reconnect",
+      "value": "Reconnect"
     },
     {
       "name": "workbench_btn_export",

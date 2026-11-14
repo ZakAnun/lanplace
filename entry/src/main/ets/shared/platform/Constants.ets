@@ -1,5 +1,5 @@
 export const SCAN_TIMEOUT_MS: number = 30000;
-export const PRIVACY_ACCEPTED_KEY: string = 'privacy_accepted_v2';
+export const PRIVACY_ACCEPTED_KEY: string = 'privacy_accepted_v3';
 export const PREFS_NAME: string = 'bluescopes_prefs';
 export const PRIVACY_POLICY_URL: string = 'https://zakanun.github.io/lanplace/legal/privacy-zh.html';
 export const PRIVACY_POLICY_URL_EN: string = 'https://zakanun.github.io/lanplace/legal/privacy-en.html';
