@@ -1,6 +1,7 @@
 export type TcpProbeResult = 'open' | 'closed' | 'timeout';
 
 export const TCP_PROBE_TIMEOUT_MS: number = 3000;
+export const NATIVE_TCP_CONNECT_TIMEOUT_MS: number = 60000;
 export const HTTP_BODY_PREVIEW_MAX: number = 512;
 export const HTTP_PROBE_METHOD: string = 'GET';
 
@@ -72,4 +73,59 @@ export function formatLanExtraLine(serviceTypes: string[], txtLine: string): str
     return txtLine;
   }
   return `${services} · ${txtLine}`;
+}
+
+export function printableTxtBytes(bytes: Array<number>): string {
+  const decoded: string = decodeUtf8Bytes(bytes);
+  let out: string = '';
+  for (let i = 0; i < decoded.length; i++) {
+    const code: number = decoded.charCodeAt(i);
+    if (code < 32 || code === 127) {
+      continue;
+    }
+    out += decoded.charAt(i);
+  }
+  return out;
+}
+
+function decodeUtf8Bytes(bytes: Array<number>): string {
+  let out: string = '';
+  let i: number = 0;
+  while (i < bytes.length) {
+    const b0: number = bytes[i] & 0xff;
+    if (b0 < 0x80) {
+      out += String.fromCharCode(b0);
+      i += 1;
+      continue;
+    }
+    if (b0 >= 0xc0 && b0 < 0xe0 && i + 1 < bytes.length && isUtf8Continuation(bytes[i + 1])) {
+      const code: number = ((b0 & 0x1f) << 6) | (bytes[i + 1] & 0x3f);
+      out += String.fromCharCode(code);
+      i += 2;
+      continue;
+    }
+    if (b0 >= 0xe0 && b0 < 0xf0 && i + 2 < bytes.length &&
+      isUtf8Continuation(bytes[i + 1]) && isUtf8Continuation(bytes[i + 2])) {
+      const code: number = ((b0 & 0x0f) << 12) | ((bytes[i + 1] & 0x3f) << 6) | (bytes[i + 2] & 0x3f);
+      out += String.fromCharCode(code);
+      i += 3;
+      continue;
+    }
+    if (b0 >= 0xf0 && b0 < 0xf8 && i + 3 < bytes.length &&
+      isUtf8Continuation(bytes[i + 1]) && isUtf8Continuation(bytes[i + 2]) &&
+      isUtf8Continuation(bytes[i + 3])) {
+      const code: number =
+        ((b0 & 0x07) << 18) | ((bytes[i + 1] & 0x3f) << 12) | ((bytes[i + 2] & 0x3f) << 6) | (bytes[i + 3] & 0x3f);
+      const extra: number = code - 0x10000;
+      out += String.fromCharCode(0xd800 + (extra >> 10), 0xdc00 + (extra & 0x3ff));
+      i += 4;
+      continue;
+    }
+    i += 1;
+  }
+  return out;
+}
+
+function isUtf8Continuation(raw: number): boolean {
+  return (raw & 0xc0) === 0x80;
 }

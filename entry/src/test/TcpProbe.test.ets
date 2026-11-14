@@ -7,11 +7,13 @@ import { LanProbeApi, LanProbeFacade } from '../main/ets/features/lan/domain/Lan
 import {
   HostPort,
   HttpHeadResult,
+  NATIVE_TCP_CONNECT_TIMEOUT_MS,
   TCP_PROBE_TIMEOUT_MS,
   TcpProbeResult,
   formatLanExtraLine,
   httpUrlForHostPort,
-  parseHostPort
+  parseHostPort,
+  printableTxtBytes
 } from '../main/ets/features/lan/domain/ProbeTypes';
 import {
   ProbeClock,
@@ -84,10 +86,24 @@ class FakeLanProbe implements LanProbeApi {
 
 class HangTcpTransport implements TcpConnectTransport {
   aborted: boolean = false;
+  seenTimeoutMs: number = -1;
 
-  connect(_host: string, _port: number, _timeoutMs: number): Promise<void> {
+  connect(_host: string, _port: number, timeoutMs: number): Promise<void> {
+    this.seenTimeoutMs = timeoutMs;
     return new Promise<void>((_resolve: () => void): void => {
     });
+  }
+
+  abort(): void {
+    this.aborted = true;
+  }
+}
+
+class NativeTimeoutTcpTransport implements TcpConnectTransport {
+  aborted: boolean = false;
+
+  connect(_host: string, _port: number, _timeoutMs: number): Promise<void> {
+    return Promise.reject(new Error('Socket timeout'));
   }
 
   abort(): void {
@@ -127,6 +143,14 @@ export default function tcpProbeTest() {
         '_http._tcp · _ipp._tcp · fn=Printer');
     });
 
+    it('formatLanExtraLineKeepsUtf8TxtValue', 0, () => {
+      const bytes: Array<number> = [0x00, 0xE5, 0xAE, 0xA2, 0x0A, 0xE5, 0x8E, 0x85];
+      const fn: string = printableTxtBytes(bytes);
+      expect(fn).assertEqual('客厅');
+      expect(formatLanExtraLine(['_googlecast._tcp'], `fn=${fn}`)).assertEqual(
+        '_googlecast._tcp · fn=客厅');
+    });
+
     it('resolvesOpenWhenTransportConnects', 0, async (): Promise<void> => {
       const transport: ImmediateTcpTransport = new ImmediateTcpTransport('open');
       const result = await tcpProbe('192.168.1.20', 8009, 3000, transport);
@@ -144,10 +168,29 @@ export default function tcpProbeTest() {
       const transport: HangTcpTransport = new HangTcpTransport();
       const pending = tcpProbe('192.168.1.20', 80, 50, transport, clock);
       expect(clock.lastDelayMs).assertEqual(50);
+      expect(transport.seenTimeoutMs).assertEqual(NATIVE_TCP_CONNECT_TIMEOUT_MS);
       clock.fire();
       const result = await pending;
       expect(result).assertEqual('timeout');
       expect(transport.aborted).assertTrue();
+    });
+
+    it('mapsNativeTimeoutClosedAndClockTimeoutSeparately', 0, async (): Promise<void> => {
+      const nativeTimeout: TcpProbeResult = await tcpProbe(
+        '192.168.1.20', 80, 3000, new NativeTimeoutTcpTransport());
+      expect(nativeTimeout).assertEqual('timeout');
+
+      const closed: TcpProbeResult = await tcpProbe(
+        '192.168.1.20', 8009, 3000, new ImmediateTcpTransport('closed'));
+      expect(closed).assertEqual('closed');
+
+      const clock: ManualProbeClock = new ManualProbeClock();
+      const hang: HangTcpTransport = new HangTcpTransport();
+      const pending = tcpProbe('192.168.1.20', 80, 50, hang, clock);
+      clock.fire();
+      const clockTimeout: TcpProbeResult = await pending;
+      expect(clockTimeout).assertEqual('timeout');
+      expect(hang.aborted).assertTrue();
     });
 
     it('tcpProbeForDeviceAppendsLanLog', 0, async (): Promise<void> => {

@@ -1,22 +1,21 @@
 import { socket } from '@kit.NetworkKit';
-import { TCP_PROBE_TIMEOUT_MS } from '../domain/ProbeTypes';
+import { NATIVE_TCP_CONNECT_TIMEOUT_MS } from '../domain/ProbeTypes';
 import { TcpConnectTransport } from './TcpProbe';
 
 export class HarmonyTcpTransport implements TcpConnectTransport {
   private current: socket.TCPSocket | null = null;
 
-  connect(host: string, port: number, timeoutMs: number): Promise<void> {
+  connect(host: string, port: number, _timeoutMs: number): Promise<void> {
     this.abort();
     const tcp: socket.TCPSocket = socket.constructTCPSocketInstance();
     this.current = tcp;
-    const timeout: number = timeoutMs > 0 ? timeoutMs : TCP_PROBE_TIMEOUT_MS;
     const options: socket.TCPConnectOptions = {
       address: {
         address: host,
         port: port,
         family: 1
       },
-      timeout: timeout
+      timeout: NATIVE_TCP_CONNECT_TIMEOUT_MS
     };
     return tcp.connect(options).then((): void => {
       this.closeQuiet(tcp);

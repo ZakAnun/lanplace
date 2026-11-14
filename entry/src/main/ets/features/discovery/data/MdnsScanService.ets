@@ -1,5 +1,6 @@
 import { common } from '@kit.AbilityKit';
 import { mdns } from '@kit.NetworkKit';
+import { printableTxtBytes } from '../../lan/domain/ProbeTypes';
 import { DeviceEnvironment } from '../../../shared/platform/DeviceEnvironment';
 import { ScanUiLabels } from '../../../shared/platform/ScanUiLabels';
 
@@ -243,15 +244,4 @@ export class MdnsScanService {
     MdnsScanService.discoveries = [];
     MdnsScanService.onUpdate = () => {};
   }
-}
-
-function printableTxtBytes(bytes: Array<number>): string {
-  let out: string = '';
-  for (let i = 0; i < bytes.length; i++) {
-    const code: number = bytes[i];
-    if (code >= 32 && code < 127) {
-      out += String.fromCharCode(code);
-    }
-  }
-  return out;
 }

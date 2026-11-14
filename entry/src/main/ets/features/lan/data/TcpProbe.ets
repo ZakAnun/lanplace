@@ -1,4 +1,4 @@
-import { TCP_PROBE_TIMEOUT_MS, TcpProbeResult } from '../domain/ProbeTypes';
+import { NATIVE_TCP_CONNECT_TIMEOUT_MS, TCP_PROBE_TIMEOUT_MS, TcpProbeResult } from '../domain/ProbeTypes';
 
 export interface TcpConnectTransport {
   connect(host: string, port: number, timeoutMs: number): Promise<void>;
@@ -40,21 +40,32 @@ export function tcpProbe(
         usedTransport.abort();
         resolve('timeout');
       });
-      usedTransport.connect(host, port, timeoutMs).then((): void => {
+      usedTransport.connect(host, port, NATIVE_TCP_CONNECT_TIMEOUT_MS).then((): void => {
         if (settled) {
           return;
         }
         settled = true;
         usedClock.cancel(timerId);
         resolve('open');
-      }).catch((_err: Object): void => {
+      }).catch((err: Object): void => {
         if (settled) {
           return;
         }
         settled = true;
         usedClock.cancel(timerId);
+        if (isTimeoutShapedError(err)) {
+          resolve('timeout');
+          return;
+        }
         resolve('closed');
       });
     }
   );
+}
+
+function isTimeoutShapedError(err: Object): boolean {
+  const asError: Error = err as Error;
+  const message: string = asError.message !== undefined ? `${asError.message}` : `${err}`;
+  const lower: string = message.toLowerCase();
+  return lower.indexOf('timeout') >= 0 || lower.indexOf('timed out') >= 0;
 }
