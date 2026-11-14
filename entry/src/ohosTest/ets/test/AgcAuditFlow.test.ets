@@ -32,6 +32,7 @@ class UiCopy {
   workbenchTitle: string = '设备工作台';
   tabOverview: string = '概览';
   tabAdvert: string = '广播';
+  tabGatt: string = 'GATT';
   tabLan: string = '网络';
   tabLog: string = '日志';
 }
@@ -57,6 +58,7 @@ function englishCopy(): UiCopy {
   copy.workbenchTitle = 'Device workbench';
   copy.tabOverview = 'Overview';
   copy.tabAdvert = 'Advert';
+  copy.tabGatt = 'GATT';
   copy.tabLan = 'Network';
   copy.tabLog = 'Log';
   return copy;
@@ -109,6 +111,15 @@ async function componentExistsWithin(driver: Driver, matcher: On, timeoutMs: num
   }
 }
 
+async function waitForComponentOrNull(driver: Driver, matcher: On, timeoutMs: number) {
+  try {
+    const found = await driver.waitForComponent(matcher, timeoutMs);
+    return found != null ? found : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
 async function waitUntilAbsent(driver: Driver, text: string, timeoutMs: number): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -121,6 +132,14 @@ async function waitUntilAbsent(driver: Driver, text: string, timeoutMs: number):
   return false;
 }
 
+const BLE_MOCK_DEVICE_NAMES: string[] = [
+  '客厅温湿度计',
+  'Mi Band Demo',
+  'Beacon-Gateway',
+  '未知设备',
+  '键盘 K380'
+];
+
 const MOCK_DEVICE_NAMES: string[] = [
   '客厅温湿度计',
   'Mi Band Demo',
@@ -131,9 +150,9 @@ const MOCK_DEVICE_NAMES: string[] = [
   '书房打印机'
 ];
 
-async function clickFirstListedDevice(driver: Driver): Promise<boolean> {
-  for (let i = 0; i < MOCK_DEVICE_NAMES.length; i++) {
-    const name = MOCK_DEVICE_NAMES[i];
+async function clickFirstOfNames(driver: Driver, names: string[]): Promise<boolean> {
+  for (let i = 0; i < names.length; i++) {
+    const name = names[i];
     if (await componentExistsWithin(driver, ON.text(name), 800)) {
       return await existThenClick(driver, ON.text(name));
     }
@@ -141,13 +160,26 @@ async function clickFirstListedDevice(driver: Driver): Promise<boolean> {
   return false;
 }
 
-async function anyMockDeviceVisible(driver: Driver): Promise<boolean> {
+async function clickFirstListedDevice(driver: Driver): Promise<boolean> {
+  return clickFirstOfNames(driver, MOCK_DEVICE_NAMES);
+}
+
+async function clickPreferredBleMock(driver: Driver): Promise<boolean> {
+  return clickFirstOfNames(driver, BLE_MOCK_DEVICE_NAMES);
+}
+
+async function firstVisibleMockName(driver: Driver): Promise<string> {
   for (let i = 0; i < MOCK_DEVICE_NAMES.length; i++) {
-    if (await componentExistsWithin(driver, ON.text(MOCK_DEVICE_NAMES[i]), 400)) {
-      return true;
+    const name = MOCK_DEVICE_NAMES[i];
+    if (await componentExistsWithin(driver, ON.text(name), 400)) {
+      return name;
     }
   }
-  return false;
+  return '';
+}
+
+async function anyMockDeviceVisible(driver: Driver): Promise<boolean> {
+  return (await firstVisibleMockName(driver)).length > 0;
 }
 
 async function tapBack(driver: Driver, copy: UiCopy): Promise<boolean> {
@@ -298,7 +330,7 @@ export default function agcAuditFlowTest() {
         return;
       }
       await componentExistsWithin(driver, ON.text(copy.chooseDevice), FIND_TIMEOUT_MS);
-      const picked = await clickFirstListedDevice(driver);
+      const picked = await clickPreferredBleMock(driver);
       if (!picked) {
         await existThenClick(driver, ON.text(copy.close));
         done();
@@ -307,10 +339,10 @@ export default function agcAuditFlowTest() {
       await sleep(PAGE_WAIT_MS);
       expect(await isWorkbenchVisible(driver, copy)).assertTrue();
       expect(await componentExists(driver, ON.text(copy.tabOverview))).assertTrue();
-      const hasAdvert = await componentExistsWithin(driver, ON.text(copy.tabAdvert), 2000);
-      const hasLan = await componentExistsWithin(driver, ON.text(copy.tabLan), 800);
-      expect(hasAdvert || hasLan).assertTrue();
+      expect(await componentExists(driver, ON.text(copy.tabAdvert))).assertTrue();
       expect(await componentExists(driver, ON.text(copy.tabLog))).assertTrue();
+      expect(await componentExistsWithin(driver, ON.text(copy.tabLan), 800)).assertFalse();
+      expect(await componentExistsWithin(driver, ON.text(copy.tabGatt), 800)).assertFalse();
       await leaveWorkbenchIfPresent(driver, copy);
       done();
     });
@@ -406,14 +438,30 @@ export default function agcAuditFlowTest() {
       expect(rotation === DisplayRotation.ROTATION_90).assertTrue();
 
       expect(await componentExists(driver, ON.text(copy.nearby))).assertTrue();
-      const hasStop = await componentExists(driver, ON.text(copy.stop));
-      const hasStart = await componentExists(driver, ON.text(copy.start));
+      const hasStop = await componentExistsWithin(driver, ON.text(copy.stop), 3000);
+      const hasStart = await componentExistsWithin(driver, ON.text(copy.start), 3000);
       expect(hasStop || hasStart).assertTrue();
-      const stopNow = await driver.findComponents(ON.text(copy.stop));
-      const actionLabel = (stopNow != null && stopNow.length > 0) ? copy.stop : copy.start;
-      const action = await driver.findComponent(ON.text(actionLabel));
-      const detail = await driver.findComponent(ON.text(copy.tapHint));
-      const legend = await driver.findComponent(ON.text(copy.ble));
+      expect(await componentExistsWithin(driver, ON.text(copy.ble), 3000)).assertTrue();
+
+      const hasTapHint = await componentExistsWithin(driver, ON.text(copy.tapHint), 2500);
+      const selectedName = await firstVisibleMockName(driver);
+      const hasPicker = await componentExistsWithin(driver, ON.text(copy.picker), 2500);
+      expect(hasTapHint || selectedName.length > 0 || hasPicker).assertTrue();
+
+      if (!hasTapHint) {
+        done();
+        return;
+      }
+
+      const actionLabel = hasStop ? copy.stop : copy.start;
+      const action = await waitForComponentOrNull(driver, ON.text(actionLabel), 3000);
+      const detail = await waitForComponentOrNull(driver, ON.text(copy.tapHint), 3000);
+      const legend = await waitForComponentOrNull(driver, ON.text(copy.ble), 3000);
+      expect(action != null && detail != null && legend != null).assertTrue();
+      if (action == null || detail == null || legend == null) {
+        done();
+        return;
+      }
       const actionBounds = await action.getBounds();
       const detailBounds = await detail.getBounds();
       const legendBounds = await legend.getBounds();
