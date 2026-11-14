@@ -11,8 +11,11 @@ const RSSI_AXIS_MAX: number = -30;
 export struct AdvertTab {
   @Prop deviceKey: string = '';
   @State localName: string = '';
-  @State advertSummary: string = '';
-  @State fieldLines: string[] = [];
+  @State flagsText: string = '';
+  @State txPowerText: string = '';
+  @State serviceUuids: string[] = [];
+  @State manufacturerHex: string = '';
+  @State serviceDataHex: string = '';
   @State samples: RssiSample[] = [];
   private settings: RenderingContextSettings = new RenderingContextSettings(true);
   private ctx: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
@@ -56,12 +59,11 @@ export struct AdvertTab {
     const snap: AdvertSnapshot | null = AdvertHistory.snapshot(this.deviceKey);
     if (snap !== null) {
       this.localName = snap.localName;
-      this.advertSummary = snap.advertSummary;
-      if (snap.advertSummary.length === 0) {
-        this.fieldLines = [];
-      } else {
-        this.fieldLines = snap.advertSummary.split(' · ');
-      }
+      this.flagsText = snap.flags !== undefined ? `0x${snap.flags.toString(16)}` : '';
+      this.txPowerText = snap.txPower !== undefined ? `${snap.txPower} dBm` : '';
+      this.serviceUuids = snap.serviceUuids.slice();
+      this.manufacturerHex = snap.manufacturerHex;
+      this.serviceDataHex = snap.serviceDataHex;
     }
     if (this.canvasReady) {
       this.drawSparkline();
@@ -153,31 +155,54 @@ export struct AdvertTab {
     ctx.fill();
   }
 
+  private hasAdvertFields(): boolean {
+    return this.localName.length > 0
+      || this.flagsText.length > 0
+      || this.txPowerText.length > 0
+      || this.serviceUuids.length > 0
+      || this.manufacturerHex.length > 0
+      || this.serviceDataHex.length > 0;
+  }
+
+  @Builder
+  advertFieldRow(label: Resource, value: string) {
+    Column({ space: 2 }) {
+      Text(label)
+        .fontSize(AppleTheme.FONT_CAPTION)
+        .fontColor(AppleTheme.INK_MUTED)
+        .width('100%')
+      Text(value)
+        .fontSize(AppleTheme.FONT_BODY)
+        .fontColor(AppleTheme.INK)
+        .fontFamily('HarmonyOS Sans')
+        .width('100%')
+    }
+    .alignItems(HorizontalAlign.Start)
+    .width('100%')
+  }
+
   @Builder
   advertFields() {
     Column({ space: 6 }) {
       if (this.localName.length > 0) {
-        Column({ space: 2 }) {
-          Text($r('app.string.workbench_advert_local_name'))
-            .fontSize(AppleTheme.FONT_CAPTION)
-            .fontColor(AppleTheme.INK_MUTED)
-            .width('100%')
-          Text(this.localName)
-            .fontSize(AppleTheme.FONT_BODY)
-            .fontColor(AppleTheme.INK)
-            .width('100%')
-        }
-        .alignItems(HorizontalAlign.Start)
-        .width('100%')
+        this.advertFieldRow($r('app.string.workbench_advert_local_name'), this.localName)
       }
-      ForEach(this.fieldLines, (part: string, index: number) => {
-        Text(part)
-          .fontSize(AppleTheme.FONT_CAPTION)
-          .fontColor(AppleTheme.INK)
-          .fontFamily('HarmonyOS Sans')
-          .width('100%')
-      }, (part: string, index: number) => `${index}-${part}`)
-      if (this.localName.length === 0 && this.advertSummary.length === 0 && this.samples.length === 0) {
+      if (this.flagsText.length > 0) {
+        this.advertFieldRow($r('app.string.workbench_advert_flags'), this.flagsText)
+      }
+      if (this.txPowerText.length > 0) {
+        this.advertFieldRow($r('app.string.workbench_advert_tx_power'), this.txPowerText)
+      }
+      ForEach(this.serviceUuids, (uuid: string, index: number) => {
+        this.advertFieldRow($r('app.string.workbench_advert_uuid'), uuid)
+      }, (uuid: string, index: number) => `${index}-${uuid}`)
+      if (this.manufacturerHex.length > 0) {
+        this.advertFieldRow($r('app.string.workbench_advert_manufacturer'), this.manufacturerHex)
+      }
+      if (this.serviceDataHex.length > 0) {
+        this.advertFieldRow($r('app.string.workbench_advert_service_data'), this.serviceDataHex)
+      }
+      if (!this.hasAdvertFields() && this.samples.length === 0) {
         Text($r('app.string.workbench_advert_empty'))
           .fontSize(AppleTheme.FONT_BODY)
           .fontColor(AppleTheme.INK_MUTED)

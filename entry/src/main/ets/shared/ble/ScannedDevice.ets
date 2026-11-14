@@ -11,4 +11,10 @@ export interface ScannedDevice {
   detailLine: string;
   advertSummary: string;
   linkState: DeviceLinkState;
+  advertLocalName: string;
+  advertFlags?: number;
+  advertTxPower?: number;
+  advertServiceUuids: string[];
+  advertManufacturerHex: string;
+  advertServiceDataHex: string;
 }

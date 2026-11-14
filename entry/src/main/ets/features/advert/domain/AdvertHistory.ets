@@ -1,8 +1,27 @@
+import { ParsedAdvert } from '../../../shared/ble/BleAdvertParser';
 import { RssiSample } from './RssiRingBuffer';
 
 export interface AdvertSnapshot {
+  flags?: number;
   localName: string;
-  advertSummary: string;
+  txPower?: number;
+  serviceUuids: string[];
+  manufacturerHex: string;
+  serviceDataHex: string;
+}
+
+export function advertSnapshotFromParsed(parsed: ParsedAdvert): AdvertSnapshot {
+  const localName: string = parsed.localName !== undefined ? parsed.localName : '';
+  const manufacturerHex: string = parsed.manufacturerHex !== undefined ? parsed.manufacturerHex : '';
+  const serviceDataHex: string = parsed.serviceDataHex !== undefined ? parsed.serviceDataHex : '';
+  return {
+    flags: parsed.flags,
+    localName: localName,
+    txPower: parsed.txPower,
+    serviceUuids: parsed.serviceUuids.slice(),
+    manufacturerHex: manufacturerHex,
+    serviceDataHex: serviceDataHex
+  };
 }
 
 export interface AdvertRssiStore {

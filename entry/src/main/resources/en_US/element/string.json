@@ -349,6 +349,26 @@
       "value": "Local name"
     },
     {
+      "name": "workbench_advert_flags",
+      "value": "Flags"
+    },
+    {
+      "name": "workbench_advert_tx_power",
+      "value": "TX power"
+    },
+    {
+      "name": "workbench_advert_uuid",
+      "value": "Service UUID"
+    },
+    {
+      "name": "workbench_advert_manufacturer",
+      "value": "Manufacturer data"
+    },
+    {
+      "name": "workbench_advert_service_data",
+      "value": "Service data"
+    },
+    {
       "name": "workbench_advert_rssi",
       "value": "RSSI"
     },

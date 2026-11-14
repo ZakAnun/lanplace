@@ -15,6 +15,7 @@ import workbenchTabPolicyTest from './WorkbenchTabPolicy.test';
 import workbenchShellStateTest from './WorkbenchShellState.test';
 import logEventBusTest from './LogEventBus.test';
 import rssiRingBufferTest from './RssiRingBuffer.test';
+import advertHistoryTest from './AdvertHistory.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -34,4 +35,5 @@ export default function testsuite() {
   workbenchShellStateTest();
   logEventBusTest();
   rssiRingBufferTest();
+  advertHistoryTest();
 }

@@ -12,6 +12,12 @@ interface MockTemplate {
   rssi: number;
   connectable: boolean;
   advertSummary: string;
+  advertLocalName: string;
+  advertFlags?: number;
+  advertTxPower?: number;
+  advertServiceUuids: string[];
+  advertManufacturerHex: string;
+  advertServiceDataHex: string;
 }
 
 const MOCK_CATALOG: MockTemplate[] = [
@@ -20,35 +26,59 @@ const MOCK_CATALOG: MockTemplate[] = [
     displayName: '客厅温湿度计',
     rssi: -48,
     connectable: true,
-    advertSummary: 'UUID 0000180a-0000-1000-8000-00805f9b34fb · TX -4 dBm'
+    advertSummary: 'UUID 0000180a-0000-1000-8000-00805f9b34fb · TX -4 dBm',
+    advertLocalName: '客厅温湿度计',
+    advertTxPower: -4,
+    advertServiceUuids: ['0000180a-0000-1000-8000-00805f9b34fb'],
+    advertManufacturerHex: '',
+    advertServiceDataHex: ''
   },
   {
     deviceId: 'AA:BB:CC:11:22:33',
     displayName: 'Mi Band Demo',
     rssi: -62,
     connectable: true,
-    advertSummary: 'Flags 0x6 · Mfg 57:01:…'
+    advertSummary: 'Flags 0x6 · Mfg 57:01:…',
+    advertLocalName: 'Mi Band Demo',
+    advertFlags: 0x6,
+    advertServiceUuids: [],
+    advertManufacturerHex: '57:01',
+    advertServiceDataHex: ''
   },
   {
     deviceId: 'AA:BB:CC:44:55:66',
     displayName: 'Beacon-Gateway',
     rssi: -71,
     connectable: false,
-    advertSummary: 'SvcData 09:ff:…'
+    advertSummary: 'SvcData 09:ff:…',
+    advertLocalName: 'Beacon-Gateway',
+    advertServiceUuids: [],
+    advertManufacturerHex: '',
+    advertServiceDataHex: '09:ff'
   },
   {
     deviceId: 'AA:BB:CC:77:88:99',
     displayName: '未知设备',
     rssi: -55,
     connectable: true,
-    advertSummary: 'UUID 0000fff0-0000-1000-8000-00805f9b34fb'
+    advertSummary: 'UUID 0000fff0-0000-1000-8000-00805f9b34fb',
+    advertLocalName: '',
+    advertServiceUuids: ['0000fff0-0000-1000-8000-00805f9b34fb'],
+    advertManufacturerHex: '',
+    advertServiceDataHex: ''
   },
   {
     deviceId: 'AA:BB:CC:DE:AD:00',
     displayName: '键盘 K380',
     rssi: -58,
     connectable: true,
-    advertSummary: 'Flags 0x4 · TX -8 dBm'
+    advertSummary: 'Flags 0x4 · TX -8 dBm',
+    advertLocalName: '键盘 K380',
+    advertFlags: 0x4,
+    advertTxPower: -8,
+    advertServiceUuids: [],
+    advertManufacturerHex: '',
+    advertServiceDataHex: ''
   }
 ];
 
@@ -96,7 +126,13 @@ export class MockBleScanService {
       connectable: t.connectable,
       detailLine: `${t.deviceId} · ${rssi} dBm · ${connLabel}`,
       advertSummary: t.advertSummary,
-      linkState: DeviceLinkState.Discovered
+      linkState: DeviceLinkState.Discovered,
+      advertLocalName: t.advertLocalName,
+      advertFlags: t.advertFlags,
+      advertTxPower: t.advertTxPower,
+      advertServiceUuids: t.advertServiceUuids.slice(),
+      advertManufacturerHex: t.advertManufacturerHex,
+      advertServiceDataHex: t.advertServiceDataHex
     };
   }
 
@@ -138,7 +174,13 @@ export class MockBleScanService {
           connectable: d.connectable,
           detailLine: `${d.deviceId} · ${rssi} dBm · ${connLabel}`,
           advertSummary: d.advertSummary,
-          linkState: d.linkState
+          linkState: d.linkState,
+          advertLocalName: d.advertLocalName,
+          advertFlags: d.advertFlags,
+          advertTxPower: d.advertTxPower,
+          advertServiceUuids: d.advertServiceUuids.slice(),
+          advertManufacturerHex: d.advertManufacturerHex,
+          advertServiceDataHex: d.advertServiceDataHex
         });
       });
       MockBleScanService.emitUpdate();

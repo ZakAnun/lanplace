@@ -10,7 +10,11 @@ export struct RadarDeviceInfoBar {
     connectable: false,
     detailLine: '',
     advertSummary: '',
-    linkState: DeviceLinkState.Discovered
+    linkState: DeviceLinkState.Discovered,
+    advertLocalName: '',
+    advertServiceUuids: [],
+    advertManufacturerHex: '',
+    advertServiceDataHex: ''
   };
 
   build() {

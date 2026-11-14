@@ -170,6 +170,12 @@ export function mergeScanResult(
     connectable,
     detailLine,
     advertSummary: parts.join(' · '),
-    linkState: connectable ? DeviceLinkState.Available : DeviceLinkState.Discovered
+    linkState: connectable ? DeviceLinkState.Available : DeviceLinkState.Discovered,
+    advertLocalName: parsed.localName !== undefined ? parsed.localName : '',
+    advertFlags: parsed.flags,
+    advertTxPower: parsed.txPower,
+    advertServiceUuids: parsed.serviceUuids.slice(),
+    advertManufacturerHex: parsed.manufacturerHex !== undefined ? parsed.manufacturerHex : '',
+    advertServiceDataHex: parsed.serviceDataHex !== undefined ? parsed.serviceDataHex : ''
   };
 }

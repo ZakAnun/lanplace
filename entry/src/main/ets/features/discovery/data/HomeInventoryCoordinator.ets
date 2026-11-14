@@ -69,8 +69,12 @@ export class HomeInventoryCoordinator {
       const key: string = bleInventoryKey(d.deviceId);
       AdvertHistory.push(key, now, d.rssi);
       AdvertHistory.recordSnapshot(key, {
-        localName: d.displayName,
-        advertSummary: d.advertSummary
+        flags: d.advertFlags,
+        localName: d.advertLocalName,
+        txPower: d.advertTxPower,
+        serviceUuids: d.advertServiceUuids.slice(),
+        manufacturerHex: d.advertManufacturerHex,
+        serviceDataHex: d.advertServiceDataHex
       });
     }
   }
