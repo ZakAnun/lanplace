@@ -315,5 +315,20 @@ export default function gattReadWriteTest() {
       expect(transport.notifyEnable).assertTrue();
       expect(transport.notifyIndicate).assertTrue();
     });
+
+    it('notifySubscriptionPersistsAcrossPanelRebuild', 0, async (): Promise<void> => {
+      const transport: IoTransport = bindIo();
+      await GattFacade.connect(DEVICE_ID);
+      const listener: GattValueListener = (_event: GattValueEvent): void => {
+      };
+      GattFacade.subscribeValues(listener);
+      await GattFacade.setCharacteristicChangeNotification(DEVICE_ID, SERVICE_UUID, HEART_UUID, true);
+      expect(transport.notifyEnable).assertTrue();
+      GattFacade.unsubscribeValues(listener);
+      expect(GattFacade.isSubscribed(DEVICE_ID, SERVICE_UUID, HEART_UUID)).assertTrue();
+      await GattFacade.setCharacteristicChangeNotification(DEVICE_ID, SERVICE_UUID, HEART_UUID, false);
+      expect(GattFacade.isSubscribed(DEVICE_ID, SERVICE_UUID, HEART_UUID)).assertFalse();
+      expect(transport.notifyEnable).assertFalse();
+    });
   });
 }

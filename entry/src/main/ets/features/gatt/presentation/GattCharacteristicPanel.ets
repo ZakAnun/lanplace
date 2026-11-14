@@ -25,6 +25,7 @@ export struct GattCharacteristicPanel {
 
   aboutToAppear(): void {
     this.disposed = false;
+    this.notifyOn = GattFacade.isSubscribed(this.deviceId, this.serviceUuid, this.characteristicUuid);
     GattFacade.subscribeValues(this.onValue);
     if (this.canRead) {
       this.readOnce();

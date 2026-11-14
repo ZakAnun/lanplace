@@ -57,6 +57,7 @@ export interface GattFacadeApi {
     characteristicUuid: string,
     enable: boolean
   ): Promise<void>;
+  isSubscribed(deviceId: string, serviceUuid: string, characteristicUuid: string): boolean;
   subscribeValues(listener: GattValueListener): void;
   unsubscribeValues(listener: GattValueListener): void;
 }
@@ -141,6 +142,14 @@ export class GattFacade {
       return Promise.reject(new GattOperationError(-1, 'unbound'));
     }
     return impl.setCharacteristicChangeNotification(deviceId, serviceUuid, characteristicUuid, enable);
+  }
+
+  static isSubscribed(deviceId: string, serviceUuid: string, characteristicUuid: string): boolean {
+    const impl: GattFacadeApi | null = GattFacade.impl;
+    if (impl === null) {
+      return false;
+    }
+    return impl.isSubscribed(deviceId, serviceUuid, characteristicUuid);
   }
 
   static subscribeValues(listener: GattValueListener): void {

@@ -53,11 +53,16 @@ function connectWithDeadline(
   });
 }
 
+function subscriptionKey(deviceId: string, serviceUuid: string, characteristicUuid: string): string {
+  return `${deviceId}|${serviceUuid}|${characteristicUuid}`;
+}
+
 export class DefaultGattFacade implements GattFacadeApi {
   private readonly transport: IGattTransport;
   private readonly clock: GattClock;
   private readonly listeners: GattValueListener[] = [];
   private readonly writeQueues: Map<string, GattWriteQueue> = new Map();
+  private readonly subscriptions: Map<string, boolean> = new Map();
 
   constructor(transport: IGattTransport, clock?: GattClock) {
     this.transport = transport;
@@ -182,11 +187,17 @@ export class DefaultGattFacade implements GattFacadeApi {
         enable,
         indicate
       );
+      this.rememberSubscription(deviceId, serviceUuid, characteristicUuid, enable);
     } catch (err) {
       const gattErr: GattOperationError = asGattOperationError(err as Object);
       this.append(deviceId, LogEventType.GATT_ERROR, `code=${gattErr.code} notify ${characteristicUuid}`);
       throw gattErr;
     }
+  }
+
+  isSubscribed(deviceId: string, serviceUuid: string, characteristicUuid: string): boolean {
+    const found: boolean | undefined = this.subscriptions.get(subscriptionKey(deviceId, serviceUuid, characteristicUuid));
+    return found === true;
   }
 
   subscribeValues(listener: GattValueListener): void {
@@ -204,6 +215,20 @@ export class DefaultGattFacade implements GattFacadeApi {
     for (let i = 0; i < next.length; i++) {
       this.listeners.push(next[i]);
     }
+  }
+
+  private rememberSubscription(
+    deviceId: string,
+    serviceUuid: string,
+    characteristicUuid: string,
+    enable: boolean
+  ): void {
+    const key: string = subscriptionKey(deviceId, serviceUuid, characteristicUuid);
+    if (enable) {
+      this.subscriptions.set(key, true);
+      return;
+    }
+    this.subscriptions.delete(key);
   }
 
   private queueFor(deviceId: string): GattWriteQueue {
