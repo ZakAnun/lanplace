@@ -1,6 +1,7 @@
 import { bytesToHex } from '../../../shared/ble/BytesHex';
 import { BleGattSession } from '../domain/BleGattSession';
 import { GattCharacteristicNode, GattServiceNode, GattValueEvent, GattValueListener } from '../domain/GattProfile';
+import { GattPhaseListener, GattSessionPhase } from '../domain/GattSessionPhase';
 import { GattWriteQueue } from '../domain/GattWriteQueue';
 import {
   GATT_CONNECT_TIMEOUT_MS,
@@ -63,10 +64,15 @@ export class DefaultGattFacade implements GattFacadeApi {
   private readonly listeners: GattValueListener[] = [];
   private readonly writeQueues: Map<string, GattWriteQueue> = new Map();
   private readonly subscriptions: Map<string, boolean> = new Map();
+  private readonly onPhase: GattPhaseListener;
 
   constructor(transport: IGattTransport, clock?: GattClock) {
     this.transport = transport;
     this.clock = clock !== undefined ? clock : new SystemGattClock();
+    this.onPhase = (deviceId: string, phase: GattSessionPhase): void => {
+      this.onSessionPhase(deviceId, phase);
+    };
+    GattConnectionRegistry.subscribePhase(this.onPhase);
     this.transport.onCharacteristicValue((event: GattValueEvent): void => {
       this.append(
         event.deviceId,
@@ -113,6 +119,7 @@ export class DefaultGattFacade implements GattFacadeApi {
 
   async disconnect(deviceId: string): Promise<void> {
     await this.transport.disconnect(deviceId);
+    this.clearDeviceIo(deviceId);
     GattConnectionRegistry.setPhase(deviceId, 'Disconnected');
     this.append(deviceId, LogEventType.GATT_DISCONNECT, 'disconnected');
   }
@@ -208,6 +215,22 @@ export class DefaultGattFacade implements GattFacadeApi {
     this.listeners.push(listener);
   }
 
+  phase(deviceId: string): GattSessionPhase | null {
+    const found: BleGattSession | null = GattConnectionRegistry.get(deviceId);
+    if (found === null) {
+      return null;
+    }
+    return found.phase;
+  }
+
+  subscribePhase(listener: GattPhaseListener): void {
+    GattConnectionRegistry.subscribePhase(listener);
+  }
+
+  unsubscribePhase(listener: GattPhaseListener): void {
+    GattConnectionRegistry.unsubscribePhase(listener);
+  }
+
   unsubscribeValues(listener: GattValueListener): void {
     const next: GattValueListener[] = [];
     for (let i = 0; i < this.listeners.length; i++) {
@@ -218,6 +241,30 @@ export class DefaultGattFacade implements GattFacadeApi {
     this.listeners.length = 0;
     for (let i = 0; i < next.length; i++) {
       this.listeners.push(next[i]);
+    }
+  }
+
+  private onSessionPhase(deviceId: string, phase: GattSessionPhase): void {
+    if (phase === 'Lost' || phase === 'Disconnected') {
+      this.clearDeviceIo(deviceId);
+    }
+  }
+
+  private clearDeviceIo(deviceId: string): void {
+    const prefix: string = deviceId + '|';
+    const dropKeys: string[] = [];
+    this.subscriptions.forEach((_enabled: boolean, key: string): void => {
+      if (key.indexOf(prefix) === 0) {
+        dropKeys.push(key);
+      }
+    });
+    for (let i = 0; i < dropKeys.length; i++) {
+      this.subscriptions.delete(dropKeys[i]);
+    }
+    const queue: GattWriteQueue | undefined = this.writeQueues.get(deviceId);
+    if (queue !== undefined) {
+      queue.drop();
+      this.writeQueues.delete(deviceId);
     }
   }
 

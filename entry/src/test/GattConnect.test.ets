@@ -14,6 +14,7 @@ import { GattServiceNode, GattValueListener } from '../main/ets/features/gatt/do
 import { DefaultGattFacade } from '../main/ets/features/gatt/data/DefaultGattFacade';
 import { GattClientHost } from '../main/ets/features/gatt/data/GattClientHost';
 import {
+  GATT_PROFILE_STATE_CONNECTED,
   GATT_PROFILE_STATE_DISCONNECTED,
   GattClock,
   GattHandleValueCallback,
@@ -28,11 +29,19 @@ import { LogEvent, LogEventDomain } from '../main/ets/features/session-log/domai
 import { LogEventType } from '../main/ets/features/session-log/domain/LogEventType';
 import { LogEventBus } from '../main/ets/features/session-log/domain/LogEventBus';
 import { InMemoryLogStore } from '../main/ets/features/session-log/data/InMemoryLogStore';
-import { resolveGattConnected } from '../main/ets/features/workbench/domain/WorkbenchShellState';
+import { InventoryDeviceKind } from '../main/ets/features/discovery/domain/HomeInventoryDevice';
+import { GattPhaseListener, GattSessionPhase } from '../main/ets/features/gatt/domain/GattSessionPhase';
+import { WorkbenchTabId } from '../main/ets/features/workbench/domain/WorkbenchTabPolicy';
+import {
+  WorkbenchShellState,
+  createWorkbenchShellState,
+  resolveGattConnected
+} from '../main/ets/features/workbench/domain/WorkbenchShellState';
 
 const DEVICE_ID: string = '11:22:33:44:55:66';
 const SECOND_ID: string = 'AA:00:00:00:00:02';
 const SERVICE_UUID: string = '0000180a-0000-1000-8000-00805f9b34fb';
+const CHAR_UUID: string = '00002a00-0000-1000-8000-00805f9b34fb';
 
 type ClockFire = () => void;
 
@@ -66,7 +75,12 @@ class ManualGattClock implements GattClock {
 class ScriptedGattHandle implements IGattClientHandle {
   disconnected: boolean = false;
   closed: boolean = false;
+  holdWrites: boolean = false;
+  writesStarted: number = 0;
+  services: GattServiceNode[] = [];
   private listener: GattLinkStateCallback | null = null;
+  private serviceWait: ((nodes: GattServiceNode[]) => void) | null = null;
+  private readonly writeReleases: Array<() => void> = [];
 
   connect(): void {
   }
@@ -80,7 +94,8 @@ class ScriptedGattHandle implements IGattClientHandle {
   }
 
   getServices(): Promise<GattServiceNode[]> {
-    return new Promise<GattServiceNode[]>((_resolve: (value: GattServiceNode[]) => void): void => {
+    return new Promise<GattServiceNode[]>((resolve: (nodes: GattServiceNode[]) => void): void => {
+      this.serviceWait = resolve;
     });
   }
 
@@ -97,7 +112,22 @@ class ScriptedGattHandle implements IGattClientHandle {
     _value: Uint8Array,
     _writeNoResponse: boolean
   ): Promise<void> {
-    return Promise.resolve();
+    this.writesStarted++;
+    if (!this.holdWrites) {
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve: () => void): void => {
+      this.writeReleases.push(resolve);
+    });
+  }
+
+  releaseWrites(): void {
+    while (this.writeReleases.length > 0) {
+      const next: (() => void) | undefined = this.writeReleases.shift();
+      if (next !== undefined) {
+        next();
+      }
+    }
   }
 
   setCharacteristicChangeNotification(
@@ -123,6 +153,23 @@ class ScriptedGattHandle implements IGattClientHandle {
   offCharacteristicChange(_callback: GattHandleValueCallback): void {
   }
 
+  emitConnected(deviceId: string): void {
+    const listener: GattLinkStateCallback | null = this.listener;
+    if (listener === null) {
+      return;
+    }
+    const event: GattLinkStateEvent = {
+      deviceId: deviceId,
+      state: GATT_PROFILE_STATE_CONNECTED
+    };
+    listener(event);
+    const wait: ((nodes: GattServiceNode[]) => void) | null = this.serviceWait;
+    if (wait !== null) {
+      this.serviceWait = null;
+      wait(this.services);
+    }
+  }
+
   emitDisconnected(deviceId: string): void {
     const listener: GattLinkStateCallback | null = this.listener;
     if (listener === null) {
@@ -140,7 +187,10 @@ class ScriptedGattTransport implements IGattTransport, IGattClientFactory {
   mode: string;
   cancelled: boolean = false;
   disconnected: boolean = false;
+  holdWrites: boolean = false;
+  writesStarted: number = 0;
   readonly handle: ScriptedGattHandle;
+  private readonly writeReleases: Array<() => void> = [];
 
   constructor(mode: string) {
     this.mode = mode;
@@ -192,7 +242,22 @@ class ScriptedGattTransport implements IGattTransport, IGattClientFactory {
     _value: Uint8Array,
     _writeNoResponse: boolean
   ): Promise<void> {
-    return Promise.resolve();
+    this.writesStarted++;
+    if (!this.holdWrites) {
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve: () => void): void => {
+      this.writeReleases.push(resolve);
+    });
+  }
+
+  releaseWrites(): void {
+    while (this.writeReleases.length > 0) {
+      const next: (() => void) | undefined = this.writeReleases.shift();
+      if (next !== undefined) {
+        next();
+      }
+    }
   }
 
   setCharacteristicChangeNotification(
@@ -416,6 +481,104 @@ export default function gattConnectTest() {
       expect(logs[0].type).assertEqual(LogEventType.GATT_DISCONNECT);
       expect(logs[0].domain).assertEqual(domainBle);
       expect(logs[0].message).assertEqual('disconnected');
+    });
+
+    it('disconnectClearsSubscriptionsAndWriteQueue', 0, async (): Promise<void> => {
+      const bound: BoundConnect = new BoundConnect('ok');
+      bound.transport.holdWrites = true;
+      await bound.facade.connect(DEVICE_ID);
+      await bound.facade.setCharacteristicChangeNotification(DEVICE_ID, SERVICE_UUID, CHAR_UUID, true);
+      expect(bound.facade.isSubscribed(DEVICE_ID, SERVICE_UUID, CHAR_UUID)).assertTrue();
+      const first: Promise<void> = bound.facade.writeCharacteristicValue(
+        DEVICE_ID, SERVICE_UUID, CHAR_UUID, new Uint8Array([1])
+      );
+      let secondDropped: boolean = false;
+      const second: Promise<void> = bound.facade.writeCharacteristicValue(
+        DEVICE_ID, SERVICE_UUID, CHAR_UUID, new Uint8Array([2])
+      ).then((): void => {
+        return;
+      }, (): void => {
+        secondDropped = true;
+      });
+      await delay(30);
+      expect(bound.transport.writesStarted).assertEqual(1);
+      await bound.facade.disconnect(DEVICE_ID);
+      expect(bound.facade.isSubscribed(DEVICE_ID, SERVICE_UUID, CHAR_UUID)).assertFalse();
+      expect(GattFacade.phase(DEVICE_ID)).assertEqual('Disconnected');
+      bound.transport.releaseWrites();
+      await first;
+      await second;
+      expect(secondDropped).assertTrue();
+      expect(bound.transport.writesStarted).assertEqual(1);
+      const third: Promise<void> = bound.facade.writeCharacteristicValue(
+        DEVICE_ID, SERVICE_UUID, CHAR_UUID, new Uint8Array([3])
+      );
+      await delay(30);
+      expect(bound.transport.writesStarted).assertEqual(2);
+      bound.transport.releaseWrites();
+      await third;
+    });
+
+    it('lostLinkClearsSubscriptionsWriteQueueAndShellConnected', 0, async (): Promise<void> => {
+      const transport: ScriptedGattTransport = new ScriptedGattTransport('link');
+      transport.handle.holdWrites = true;
+      const host: GattClientHost = new GattClientHost(transport);
+      const facade: DefaultGattFacade = new DefaultGattFacade(host, new ManualGattClock());
+      GattFacade.bindFacade(facade);
+      let lostId: string = '';
+      const listener: GattPhaseListener = (deviceId: string, phase: GattSessionPhase): void => {
+        if (phase === 'Lost') {
+          lostId = deviceId;
+        }
+      };
+      GattFacade.subscribePhase(listener);
+      const pending: Promise<void> = facade.connect(DEVICE_ID);
+      transport.handle.emitConnected(DEVICE_ID);
+      await pending;
+      expect(facade.isConnected(DEVICE_ID)).assertTrue();
+      await facade.setCharacteristicChangeNotification(DEVICE_ID, SERVICE_UUID, CHAR_UUID, true);
+      expect(facade.isSubscribed(DEVICE_ID, SERVICE_UUID, CHAR_UUID)).assertTrue();
+      const first: Promise<void> = facade.writeCharacteristicValue(
+        DEVICE_ID, SERVICE_UUID, CHAR_UUID, new Uint8Array([1])
+      );
+      let secondDropped: boolean = false;
+      const second: Promise<void> = facade.writeCharacteristicValue(
+        DEVICE_ID, SERVICE_UUID, CHAR_UUID, new Uint8Array([2])
+      ).then((): void => {
+        return;
+      }, (): void => {
+        secondDropped = true;
+      });
+      await delay(30);
+      expect(transport.handle.writesStarted).assertEqual(1);
+      transport.handle.emitDisconnected(DEVICE_ID);
+      const found: BleGattSession | null = GattConnectionRegistry.get(DEVICE_ID);
+      expect(found !== null).assertTrue();
+      expect((found as BleGattSession).phase).assertEqual('Lost');
+      expect(lostId).assertEqual(DEVICE_ID);
+      expect(facade.isSubscribed(DEVICE_ID, SERVICE_UUID, CHAR_UUID)).assertFalse();
+      expect(resolveGattConnected(bleKey(DEVICE_ID))).assertFalse();
+      const shell: WorkbenchShellState = createWorkbenchShellState(
+        bleKey(DEVICE_ID),
+        InventoryDeviceKind.Ble,
+        'Sensor'
+      );
+      expect(shell.gattConnected).assertFalse();
+      expect(shell.linkLost).assertTrue();
+      expect(shell.activeTab).assertEqual(WorkbenchTabId.Overview);
+      transport.handle.releaseWrites();
+      await first;
+      await second;
+      expect(secondDropped).assertTrue();
+      expect(transport.handle.writesStarted).assertEqual(1);
+      const third: Promise<void> = facade.writeCharacteristicValue(
+        DEVICE_ID, SERVICE_UUID, CHAR_UUID, new Uint8Array([3])
+      );
+      await delay(30);
+      expect(transport.handle.writesStarted).assertEqual(2);
+      transport.handle.releaseWrites();
+      await third;
+      GattFacade.unsubscribePhase(listener);
     });
   });
 }

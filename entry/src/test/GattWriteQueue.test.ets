@@ -58,5 +58,44 @@ export default function gattWriteQueueTest() {
       expect(secondStarted).assertTrue();
       expect(queue.inFlight()).assertEqual(0);
     });
+
+    it('dropSkipsQueuedWorkAndStartsFresh', 0, async (): Promise<void> => {
+      const queue: GattWriteQueue = new GattWriteQueue();
+      let started: number = 0;
+      let releaseFirst: () => void = (): void => {
+      };
+      const first: Promise<void> = queue.enqueue((): Promise<void> => {
+        started++;
+        return new Promise<void>((resolve: () => void): void => {
+          releaseFirst = resolve;
+        });
+      });
+      let secondStarted: boolean = false;
+      const second: Promise<void> = queue.enqueue((): Promise<void> => {
+        secondStarted = true;
+        started++;
+        return Promise.resolve();
+      });
+      await delay(20);
+      expect(started).assertEqual(1);
+      queue.drop();
+      releaseFirst();
+      let secondDropped: boolean = false;
+      try {
+        await second;
+      } catch (_err) {
+        secondDropped = true;
+      }
+      await first;
+      expect(secondDropped).assertTrue();
+      expect(secondStarted).assertFalse();
+      const third: Promise<void> = queue.enqueue((): Promise<void> => {
+        started++;
+        return Promise.resolve();
+      });
+      await third;
+      expect(started).assertEqual(2);
+      expect(queue.inFlight()).assertEqual(0);
+    });
   });
 }

@@ -1,4 +1,5 @@
 import { GattServiceNode, GattValueListener } from './GattProfile';
+import { GattPhaseListener, GattSessionPhase } from './GattSessionPhase';
 
 export const GATT_CONNECT_TIMEOUT_MS: number = 30000;
 export const GATT_ERROR_MAX_CONNECTIONS: number = 2900006;
@@ -61,6 +62,9 @@ export interface GattFacadeApi {
   isSubscribed(deviceId: string, serviceUuid: string, characteristicUuid: string): boolean;
   subscribeValues(listener: GattValueListener): void;
   unsubscribeValues(listener: GattValueListener): void;
+  phase(deviceId: string): GattSessionPhase | null;
+  subscribePhase(listener: GattPhaseListener): void;
+  unsubscribePhase(listener: GattPhaseListener): void;
 }
 
 export class GattFacade {
@@ -176,5 +180,29 @@ export class GattFacade {
       return;
     }
     impl.unsubscribeValues(listener);
+  }
+
+  static phase(deviceId: string): GattSessionPhase | null {
+    const impl: GattFacadeApi | null = GattFacade.impl;
+    if (impl === null) {
+      return null;
+    }
+    return impl.phase(deviceId);
+  }
+
+  static subscribePhase(listener: GattPhaseListener): void {
+    const impl: GattFacadeApi | null = GattFacade.impl;
+    if (impl === null) {
+      return;
+    }
+    impl.subscribePhase(listener);
+  }
+
+  static unsubscribePhase(listener: GattPhaseListener): void {
+    const impl: GattFacadeApi | null = GattFacade.impl;
+    if (impl === null) {
+      return;
+    }
+    impl.unsubscribePhase(listener);
   }
 }

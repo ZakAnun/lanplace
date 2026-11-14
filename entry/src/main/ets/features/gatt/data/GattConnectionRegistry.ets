@@ -1,9 +1,10 @@
 import { BleGattSession } from '../domain/BleGattSession';
 import { GattCharacteristicNode, GattServiceNode } from '../domain/GattProfile';
-import { GattSessionPhase } from '../domain/GattSessionPhase';
+import { GattPhaseListener, GattSessionPhase } from '../domain/GattSessionPhase';
 
 export class GattConnectionRegistry {
   private static readonly sessions: Map<string, BleGattSession> = new Map();
+  private static readonly phaseListeners: GattPhaseListener[] = [];
 
   static get(deviceId: string): BleGattSession | null {
     const found: BleGattSession | undefined = GattConnectionRegistry.sessions.get(deviceId);
@@ -14,7 +15,9 @@ export class GattConnectionRegistry {
   }
 
   static register(session: BleGattSession): void {
-    GattConnectionRegistry.sessions.set(session.deviceId, GattConnectionRegistry.clone(session));
+    const stored: BleGattSession = GattConnectionRegistry.clone(session);
+    GattConnectionRegistry.sessions.set(stored.deviceId, stored);
+    GattConnectionRegistry.emitPhase(stored.deviceId, stored.phase);
   }
 
   static setPhase(deviceId: string, phase: GattSessionPhase): void {
@@ -23,6 +26,24 @@ export class GattConnectionRegistry {
       return;
     }
     found.phase = phase;
+    GattConnectionRegistry.emitPhase(deviceId, phase);
+  }
+
+  static subscribePhase(listener: GattPhaseListener): void {
+    GattConnectionRegistry.phaseListeners.push(listener);
+  }
+
+  static unsubscribePhase(listener: GattPhaseListener): void {
+    const next: GattPhaseListener[] = [];
+    for (let i = 0; i < GattConnectionRegistry.phaseListeners.length; i++) {
+      if (GattConnectionRegistry.phaseListeners[i] !== listener) {
+        next.push(GattConnectionRegistry.phaseListeners[i]);
+      }
+    }
+    GattConnectionRegistry.phaseListeners.length = 0;
+    for (let i = 0; i < next.length; i++) {
+      GattConnectionRegistry.phaseListeners.push(next[i]);
+    }
   }
 
   static connectedDeviceIds(): string[] {
@@ -37,6 +58,17 @@ export class GattConnectionRegistry {
 
   static clear(): void {
     GattConnectionRegistry.sessions.clear();
+    GattConnectionRegistry.phaseListeners.length = 0;
+  }
+
+  private static emitPhase(deviceId: string, phase: GattSessionPhase): void {
+    const snapshot: GattPhaseListener[] = [];
+    for (let i = 0; i < GattConnectionRegistry.phaseListeners.length; i++) {
+      snapshot.push(GattConnectionRegistry.phaseListeners[i]);
+    }
+    for (let i = 0; i < snapshot.length; i++) {
+      snapshot[i](deviceId, phase);
+    }
   }
 
   private static clone(session: BleGattSession): BleGattSession {

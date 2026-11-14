@@ -8,6 +8,7 @@ export struct OverviewTab {
   @Prop detailLine: string = '';
   @Prop connectable: boolean = false;
   @Prop gattConnected: boolean = false;
+  @Prop linkLost: boolean = false;
   @Prop connecting: boolean = false;
   onConnect: () => void = (): void => {
   };
@@ -60,6 +61,18 @@ export struct OverviewTab {
         .fontSize(AppleTheme.FONT_BODY)
         .fontColor(AppleTheme.INK_MUTED)
         .width('100%')
+    } else if (this.linkLost) {
+      Button($r('app.string.workbench_btn_reconnect'))
+        .type(ButtonType.Normal)
+        .width('100%')
+        .height(AppleTheme.TOUCH_TARGET_VP)
+        .fontSize(AppleTheme.FONT_BODY)
+        .fontColor(AppleTheme.CANVAS)
+        .backgroundColor(AppleTheme.PRIMARY)
+        .borderRadius(AppleTheme.RADIUS_PILL)
+        .onClick(() => {
+          this.onConnect();
+        })
     } else {
       Button($r('app.string.workbench_btn_connect'))
         .type(ButtonType.Normal)
@@ -92,6 +105,11 @@ export struct OverviewTab {
           .width('100%')
       } else if (this.gattConnected) {
         Text($r('app.string.workbench_status_connected'))
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+          .width('100%')
+      } else if (this.linkLost) {
+        Text($r('app.string.workbench_status_lost'))
           .fontSize(AppleTheme.FONT_CAPTION)
           .fontColor(AppleTheme.INK_MUTED)
           .width('100%')

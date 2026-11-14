@@ -1,6 +1,7 @@
 import { parseBleDeviceId } from '../../discovery/domain/DeviceWorkbenchParams';
 import { InventoryDeviceKind } from '../../discovery/domain/HomeInventoryDevice';
 import { GattFacade } from '../../gatt/domain/GattFacade';
+import { GattSessionPhase } from '../../gatt/domain/GattSessionPhase';
 import { WorkbenchTabId, visibleTabs } from './WorkbenchTabPolicy';
 
 export interface WorkbenchShellState {
@@ -9,15 +10,45 @@ export interface WorkbenchShellState {
   displayName: string;
   connectable: boolean;
   gattConnected: boolean;
+  linkLost: boolean;
   activeTab: WorkbenchTabId;
 }
 
-export function resolveGattConnected(deviceKey: string): boolean {
+export function resolveGattPhase(deviceKey: string): GattSessionPhase | null {
   const deviceId: string | undefined = parseBleDeviceId(deviceKey);
   if (deviceId === undefined) {
-    return false;
+    return null;
   }
-  return GattFacade.isConnected(deviceId);
+  return GattFacade.phase(deviceId);
+}
+
+export function gattConnectedForPhase(phase: GattSessionPhase | null): boolean {
+  return phase === 'Connected';
+}
+
+export function resolveGattConnected(deviceKey: string): boolean {
+  return gattConnectedForPhase(resolveGattPhase(deviceKey));
+}
+
+export function applyConnectionPhase(
+  state: WorkbenchShellState,
+  phase: GattSessionPhase | null
+): WorkbenchShellState {
+  const gattConnected: boolean = gattConnectedForPhase(phase);
+  let activeTab: WorkbenchTabId = state.activeTab;
+  if (!gattConnected && activeTab === WorkbenchTabId.Gatt) {
+    activeTab = WorkbenchTabId.Overview;
+  }
+  const next: WorkbenchShellState = {
+    deviceKey: state.deviceKey,
+    kind: state.kind,
+    displayName: state.displayName,
+    connectable: state.connectable,
+    gattConnected: gattConnected,
+    linkLost: phase === 'Lost',
+    activeTab: activeTab
+  };
+  return next;
 }
 
 export function deriveConnectable(kind: InventoryDeviceKind): boolean {
@@ -55,6 +86,7 @@ export function selectWorkbenchTab(state: WorkbenchShellState, tab: WorkbenchTab
     displayName: state.displayName,
     connectable: state.connectable,
     gattConnected: state.gattConnected,
+    linkLost: state.linkLost,
     activeTab: nextTab
   };
   return next;
@@ -67,7 +99,8 @@ export function createWorkbenchShellState(
   connectable?: boolean,
   initialTab?: WorkbenchTabId
 ): WorkbenchShellState {
-  const gattConnected: boolean = resolveGattConnected(deviceKey);
+  const phase: GattSessionPhase | null = resolveGattPhase(deviceKey);
+  const gattConnected: boolean = gattConnectedForPhase(phase);
   const resolvedConnectable: boolean = connectable !== undefined ? connectable : deriveConnectable(kind);
   const state: WorkbenchShellState = {
     deviceKey: deviceKey,
@@ -75,6 +108,7 @@ export function createWorkbenchShellState(
     displayName: displayName,
     connectable: resolvedConnectable,
     gattConnected: gattConnected,
+    linkLost: phase === 'Lost',
     activeTab: resolveInitialTab(kind, gattConnected, initialTab)
   };
   return state;

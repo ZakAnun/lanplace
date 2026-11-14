@@ -10,9 +10,11 @@ import {
   GattFacade,
   gattErrorCode
 } from '../../gatt/domain/GattFacade';
+import { GattPhaseListener, GattSessionPhase } from '../../gatt/domain/GattSessionPhase';
 import { WorkbenchTabId, visibleTabs } from '../domain/WorkbenchTabPolicy';
 import {
   WorkbenchShellState,
+  applyConnectionPhase,
   applyOpenGattDebug,
   createWorkbenchShellState,
   deriveConnectable,
@@ -35,9 +37,11 @@ export struct WorkbenchShell {
   @Prop initialTab: WorkbenchTabId = WorkbenchTabId.Overview;
   @State activeTab: WorkbenchTabId = WorkbenchTabId.Overview;
   @State gattConnected: boolean = false;
+  @State linkLost: boolean = false;
   @State gattConnecting: boolean = false;
   @State connectable: boolean = true;
   @State pageLandscape: boolean = false;
+  private phaseListener: GattPhaseListener | null = null;
 
   aboutToAppear(): void {
     const state: WorkbenchShellState = createWorkbenchShellState(
@@ -49,7 +53,23 @@ export struct WorkbenchShell {
     );
     this.connectable = state.connectable;
     this.gattConnected = state.gattConnected;
+    this.linkLost = state.linkLost;
     this.activeTab = state.activeTab;
+    if (this.phaseListener !== null) {
+      GattFacade.unsubscribePhase(this.phaseListener);
+    }
+    const listener: GattPhaseListener = (deviceId: string, phase: GattSessionPhase): void => {
+      this.onRemotePhase(deviceId, phase);
+    };
+    this.phaseListener = listener;
+    GattFacade.subscribePhase(listener);
+  }
+
+  aboutToDisappear(): void {
+    if (this.phaseListener !== null) {
+      GattFacade.unsubscribePhase(this.phaseListener);
+      this.phaseListener = null;
+    }
   }
 
   private tabIds(): WorkbenchTabId[] {
@@ -62,16 +82,33 @@ export struct WorkbenchShell {
     }
   }
 
-  private onSelectTab(tab: WorkbenchTabId): void {
-    const snapshot: WorkbenchShellState = {
+  private snapshot(): WorkbenchShellState {
+    const state: WorkbenchShellState = {
       deviceKey: this.deviceKey,
       kind: this.kind,
       displayName: this.displayName,
       connectable: this.connectable,
       gattConnected: this.gattConnected,
+      linkLost: this.linkLost,
       activeTab: this.activeTab
     };
-    this.activeTab = selectWorkbenchTab(snapshot, tab).activeTab;
+    return state;
+  }
+
+  private onRemotePhase(deviceId: string, phase: GattSessionPhase): void {
+    const mine: string | undefined = parseBleDeviceId(this.deviceKey);
+    if (mine === undefined || mine !== deviceId) {
+      return;
+    }
+    const next: WorkbenchShellState = applyConnectionPhase(this.snapshot(), phase);
+    this.gattConnected = next.gattConnected;
+    this.linkLost = next.linkLost;
+    this.activeTab = next.activeTab;
+    this.gattConnecting = phase === 'Connecting';
+  }
+
+  private onSelectTab(tab: WorkbenchTabId): void {
+    this.activeTab = selectWorkbenchTab(this.snapshot(), tab).activeTab;
   }
 
   private onOpenGattDebug(): void {
@@ -89,13 +126,20 @@ export struct WorkbenchShell {
     this.gattConnecting = true;
     GattFacade.connect(deviceId).then((): void => {
       this.gattConnecting = false;
-      this.gattConnected = true;
+      const next: WorkbenchShellState = applyConnectionPhase(this.snapshot(), GattFacade.phase(deviceId));
+      this.gattConnected = next.gattConnected;
+      this.linkLost = next.linkLost;
+      this.activeTab = next.activeTab;
+      if (!next.gattConnected) {
+        return;
+      }
       this.getUIContext().getPromptAction().showToast({
         message: $r('app.string.workbench_connected')
       });
     }).catch((err: Object): void => {
       this.gattConnecting = false;
       this.gattConnected = GattFacade.isConnected(deviceId);
+      this.linkLost = GattFacade.phase(deviceId) === 'Lost';
       if (gattErrorCode(err) === GATT_ERROR_MAX_CONNECTIONS) {
         this.getUIContext().getPromptAction().showToast({
           message: $r('app.string.toast_gatt_max_connections')
@@ -116,6 +160,7 @@ export struct WorkbenchShell {
     GattFacade.disconnect(deviceId).then((): void => {
       this.gattConnecting = false;
       this.gattConnected = false;
+      this.linkLost = false;
       if (this.activeTab === WorkbenchTabId.Gatt) {
         this.activeTab = WorkbenchTabId.Overview;
       }
@@ -171,6 +216,7 @@ export struct WorkbenchShell {
         detailLine: this.detailLine,
         connectable: this.connectable,
         gattConnected: this.gattConnected,
+        linkLost: this.linkLost,
         connecting: this.gattConnecting,
         onConnect: (): void => {
           this.onConnect();

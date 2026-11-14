@@ -3,11 +3,14 @@ import { InventoryDeviceKind } from '../main/ets/features/discovery/domain/HomeI
 import { GattConnectionRegistry } from '../main/ets/features/gatt/data/GattConnectionRegistry';
 import { GattFacade } from '../main/ets/features/gatt/domain/GattFacade';
 import { WorkbenchTabId } from '../main/ets/features/workbench/domain/WorkbenchTabPolicy';
+import { GattSessionPhase } from '../main/ets/features/gatt/domain/GattSessionPhase';
 import {
   WorkbenchShellState,
+  applyConnectionPhase,
   applyOpenGattDebug,
   createWorkbenchShellState,
   deriveConnectable,
+  gattConnectedForPhase,
   resolveGattConnected,
   resolveInitialTab,
   selectWorkbenchTab
@@ -29,6 +32,7 @@ export default function workbenchShellStateTest() {
       const state: WorkbenchShellState = createWorkbenchShellState('ble:1', InventoryDeviceKind.Ble, 'Sensor');
       expect(state.activeTab).assertEqual(WorkbenchTabId.Overview);
       expect(state.gattConnected).assertFalse();
+      expect(state.linkLost).assertFalse();
       expect(state.deviceKey).assertEqual('ble:1');
       expect(state.kind).assertEqual(InventoryDeviceKind.Ble);
       expect(state.displayName).assertEqual('Sensor');
@@ -84,6 +88,42 @@ export default function workbenchShellStateTest() {
       const state: WorkbenchShellState = createWorkbenchShellState('ble:1', InventoryDeviceKind.Ble, 'Sensor');
       const next: WorkbenchShellState = selectWorkbenchTab(state, WorkbenchTabId.Gatt);
       expect(next.activeTab).assertEqual(WorkbenchTabId.Overview);
+    });
+
+    it('lostPhaseClearsGattConnectedAndLeavesOverview', 0, () => {
+      expect(gattConnectedForPhase('Lost')).assertFalse();
+      expect(gattConnectedForPhase('Connected')).assertTrue();
+      expect(gattConnectedForPhase('Disconnected')).assertFalse();
+      expect(gattConnectedForPhase(null)).assertFalse();
+      const state: WorkbenchShellState = createWorkbenchShellState('ble:1', InventoryDeviceKind.Ble, 'Sensor');
+      const onGatt: WorkbenchShellState = {
+        deviceKey: state.deviceKey,
+        kind: state.kind,
+        displayName: state.displayName,
+        connectable: state.connectable,
+        gattConnected: true,
+        linkLost: false,
+        activeTab: WorkbenchTabId.Gatt
+      };
+      const lost: GattSessionPhase = 'Lost';
+      const next: WorkbenchShellState = applyConnectionPhase(onGatt, lost);
+      expect(next.gattConnected).assertFalse();
+      expect(next.linkLost).assertTrue();
+      expect(next.activeTab).assertEqual(WorkbenchTabId.Overview);
+      const advert: WorkbenchShellState = selectWorkbenchTab(state, WorkbenchTabId.Advert);
+      const lostAdvert: WorkbenchShellState = applyConnectionPhase(advert, lost);
+      expect(lostAdvert.activeTab).assertEqual(WorkbenchTabId.Advert);
+      expect(lostAdvert.gattConnected).assertFalse();
+      const disconnected: GattSessionPhase = 'Disconnected';
+      const dropped: WorkbenchShellState = applyConnectionPhase(onGatt, disconnected);
+      expect(dropped.gattConnected).assertFalse();
+      expect(dropped.linkLost).assertFalse();
+      expect(dropped.activeTab).assertEqual(WorkbenchTabId.Overview);
+      const connected: GattSessionPhase = 'Connected';
+      const back: WorkbenchShellState = applyConnectionPhase(next, connected);
+      expect(back.gattConnected).assertTrue();
+      expect(back.linkLost).assertFalse();
+      expect(back.activeTab).assertEqual(WorkbenchTabId.Overview);
     });
   });
 }
