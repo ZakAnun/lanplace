@@ -6,6 +6,7 @@ import {
   LANDSCAPE_RIGHT_RAIL_WIDTH,
   radarZoneWidth
 } from '../../../shared/layout/RadarLayoutHelper';
+import { DeviceLinkState } from '../../../shared/ble/ScannedDevice';
 import { HomeInventoryDevice, InventoryDeviceKind } from '../domain/HomeInventoryDevice';
 import { HomeInventoryDeviceInfoBar } from './HomeInventoryDeviceInfoBar';
 import { InventoryDiscoveryRadar } from './InventoryDiscoveryRadar';
@@ -74,7 +75,8 @@ export struct HomeInventoryPanel {
       displayName: '',
       detailLine: '',
       extraLine: '',
-      rssi: 0
+      rssi: 0,
+      linkState: DeviceLinkState.Discovered
     };
   }
 

@@ -79,6 +79,7 @@ struct HomeInventory {
   onPageShow(): void {
     this.radarActive = true;
     this.refreshWifiSsid();
+    this.devices = HomeInventoryCoordinator.snapshotDevices();
   }
 
   private restoreScanFilterFields(): void {

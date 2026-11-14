@@ -125,6 +125,10 @@ export class DefaultGattFacade implements GattFacadeApi {
     return found.phase === 'Connected';
   }
 
+  connectedDeviceIds(): string[] {
+    return GattConnectionRegistry.connectedDeviceIds();
+  }
+
   profile(deviceId: string): GattServiceNode[] {
     const found: BleGattSession | null = GattConnectionRegistry.get(deviceId);
     if (found === null || found.profile === undefined) {

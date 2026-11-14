@@ -117,6 +117,10 @@
       "value": "局域网"
     },
     {
+      "name": "inventory_link_connected",
+      "value": "已连接"
+    },
+    {
       "name": "inventory_rssi_line",
       "value": "信号强度 %1$d dBm"
     },

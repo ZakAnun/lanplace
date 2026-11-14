@@ -23,6 +23,7 @@ import bytesHexTest from './BytesHex.test';
 import sigCharacteristicNamesTest from './SigCharacteristicNames.test';
 import gattWriteQueueTest from './GattWriteQueue.test';
 import gattReadWriteTest from './GattReadWrite.test';
+import mergeRegistryLinkStateTest from './mergeRegistryLinkState.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -50,4 +51,5 @@ export default function testsuite() {
   sigCharacteristicNamesTest();
   gattWriteQueueTest();
   gattReadWriteTest();
+  mergeRegistryLinkStateTest();
 }

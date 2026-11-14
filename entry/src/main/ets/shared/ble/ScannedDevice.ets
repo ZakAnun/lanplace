@@ -1,6 +1,7 @@
 export enum DeviceLinkState {
   Discovered = 0,
-  Available = 1
+  Available = 1,
+  Connected = 2
 }
 
 export interface ScannedDevice {

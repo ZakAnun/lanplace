@@ -1,5 +1,6 @@
 import { AppleTheme } from '../../../shared/theme/AppleTheme';
 import { computeDevicePickerScrollHeightVp, PICKER_ROW_GAP_VP } from '../../../shared/layout/DevicePickerSheetLayout';
+import { DeviceLinkState } from '../../../shared/ble/ScannedDevice';
 import { ScanUiLabels } from '../../../shared/platform/ScanUiLabels';
 import { HomeInventoryDevice, InventoryDeviceKind } from '../domain/HomeInventoryDevice';
 
@@ -77,6 +78,12 @@ export struct InventoryDevicePickerSheet {
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
                   .layoutWeight(1)
+                if (item.linkState === DeviceLinkState.Connected) {
+                  Text(ScanUiLabels.inventoryLinkConnected)
+                    .fontSize(AppleTheme.FONT_CAPTION)
+                    .fontColor(AppleTheme.PRIMARY)
+                    .constraintSize({ minWidth: 32 })
+                }
               }
               .width('100%')
               .height(AppleTheme.TOUCH_TARGET_VP)

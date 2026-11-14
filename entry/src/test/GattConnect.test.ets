@@ -284,6 +284,9 @@ export default function gattConnectTest() {
       expect(resolveGattConnected(bleKey(DEVICE_ID))).assertTrue();
       expect(resolveGattConnected('lan:host:192.168.1.8')).assertFalse();
       expect(resolveGattConnected('ble:')).assertFalse();
+      const ids: string[] = GattFacade.connectedDeviceIds();
+      expect(ids.length).assertEqual(1);
+      expect(ids[0]).assertEqual(DEVICE_ID);
     });
 
     it('queryFalseWhileConnectingOrUnbound', 0, () => {

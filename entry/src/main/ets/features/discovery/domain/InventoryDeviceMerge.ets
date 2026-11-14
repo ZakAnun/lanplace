@@ -1,3 +1,4 @@
+import { DeviceLinkState } from '../../../shared/ble/ScannedDevice';
 import {
   HomeInventoryDevice,
   InventoryDeviceKind
@@ -29,7 +30,8 @@ export function syntheticInventoryFeed(bleCount: number, lanCount: number): Home
       displayName: `BLE ${i}`,
       detailLine: `${-40 - (i % 50)} dBm`,
       extraLine: '',
-      rssi: -40 - (i % 50)
+      rssi: -40 - (i % 50),
+      linkState: DeviceLinkState.Discovered
     });
   }
   for (let i = 0; i < lanCount; i++) {
@@ -40,7 +42,8 @@ export function syntheticInventoryFeed(bleCount: number, lanCount: number): Home
       displayName: `LAN ${i}`,
       detailLine: `${host}:80`,
       extraLine: '_http._tcp',
-      rssi: 0
+      rssi: 0,
+      linkState: DeviceLinkState.Discovered
     });
   }
   return list;
@@ -56,7 +59,8 @@ export function withRssiJitter(list: HomeInventoryDevice[], delta: number): Home
       displayName: d.displayName,
       detailLine: d.detailLine,
       extraLine: d.extraLine,
-      rssi: d.rssi + delta
+      rssi: d.rssi + delta,
+      linkState: d.linkState
     });
   }
   return next;

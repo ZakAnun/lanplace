@@ -43,6 +43,7 @@ export interface GattFacadeApi {
   connect(deviceId: string): Promise<void>;
   disconnect(deviceId: string): Promise<void>;
   isConnected(deviceId: string): boolean;
+  connectedDeviceIds(): string[];
   profile(deviceId: string): GattServiceNode[];
   readCharacteristicValue(deviceId: string, serviceUuid: string, characteristicUuid: string): Promise<Uint8Array>;
   writeCharacteristicValue(
@@ -95,6 +96,15 @@ export class GattFacade {
       return false;
     }
     return impl.isConnected(deviceId);
+  }
+
+  static connectedDeviceIds(): string[] {
+    const impl: GattFacadeApi | null = GattFacade.impl;
+    if (impl === null) {
+      const empty: string[] = [];
+      return empty;
+    }
+    return impl.connectedDeviceIds();
   }
 
   static profile(deviceId: string): GattServiceNode[] {

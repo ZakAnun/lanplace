@@ -117,6 +117,10 @@
       "value": "LAN"
     },
     {
+      "name": "inventory_link_connected",
+      "value": "Connected"
+    },
+    {
       "name": "inventory_rssi_line",
       "value": "Signal %1$d dBm"
     },

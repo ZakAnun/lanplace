@@ -8,6 +8,7 @@ export class ScanUiLabels {
   static broadcastOnly: string = '仅广播';
   static a11yPickLan: string = '%1$s，局域网';
   static a11yPickBle: string = '%1$s，蓝牙';
+  static inventoryLinkConnected: string = '已连接';
 
   static load(context: common.Context): void {
     try {
@@ -18,6 +19,7 @@ export class ScanUiLabels {
       ScanUiLabels.broadcastOnly = rm.getStringByNameSync('adv_broadcast_only');
       ScanUiLabels.a11yPickLan = rm.getStringByNameSync('inventory_a11y_pick_lan');
       ScanUiLabels.a11yPickBle = rm.getStringByNameSync('inventory_a11y_pick_ble');
+      ScanUiLabels.inventoryLinkConnected = rm.getStringByNameSync('inventory_link_connected');
     } catch (_err) {
       // 资源缺失时保留与 base 一致的中文默认值
     }

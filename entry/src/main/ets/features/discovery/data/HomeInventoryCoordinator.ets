@@ -11,9 +11,11 @@ import {
   HomeInventoryDevice,
   InventoryDeviceKind
 } from '../domain/HomeInventoryDevice';
-import { ScannedDevice } from '../../../shared/ble/ScannedDevice';
+import { DeviceLinkState, ScannedDevice } from '../../../shared/ble/ScannedDevice';
 import { bleInventoryKey } from '../domain/InventoryDeviceMerge';
+import { applyConnectedBadge } from '../domain/mergeRegistryLinkState';
 import { ScanUiLabels } from '../../../shared/platform/ScanUiLabels';
+import { GattFacade } from '../../gatt/domain/GattFacade';
 import { BleScanCoordinator } from './BleScanCoordinator';
 import { BLE_SCAN_STOP_QUIET } from './BleScanService';
 import { LanDiscoveredDevice, MdnsScanService } from './MdnsScanService';
@@ -52,7 +54,8 @@ export class HomeInventoryCoordinator {
         displayName: d.displayName.length > 0 ? d.displayName : ScanUiLabels.unknownBleDevice,
         detailLine: d.detailLine,
         extraLine: d.advertSummary,
-        rssi: d.rssi
+        rssi: d.rssi,
+        linkState: d.linkState
       });
     }
     for (let i = 0; i < HomeInventoryCoordinator.lanDevices.length; i++) {
@@ -63,10 +66,20 @@ export class HomeInventoryCoordinator {
         displayName: d.displayName,
         detailLine: `${d.hostAddress}:${d.port}`,
         extraLine: d.serviceTypes.join(' · '),
-        rssi: 0
+        rssi: 0,
+        linkState: DeviceLinkState.Discovered
       });
     }
-    return merged;
+    return applyConnectedBadge(merged, HomeInventoryCoordinator.connectedInventoryKeys());
+  }
+
+  private static connectedInventoryKeys(): Set<string> {
+    const keys: Set<string> = new Set();
+    const ids: string[] = GattFacade.connectedDeviceIds();
+    for (let i = 0; i < ids.length; i++) {
+      keys.add(bleInventoryKey(ids[i]));
+    }
+    return keys;
   }
 
   private static emitUpdate(): void {

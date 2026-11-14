@@ -1,4 +1,6 @@
 import { AppleTheme } from '../../../shared/theme/AppleTheme';
+import { DeviceLinkState } from '../../../shared/ble/ScannedDevice';
+import { ScanUiLabels } from '../../../shared/platform/ScanUiLabels';
 import {
   HomeInventoryDevice,
   InventoryDeviceKind
@@ -12,7 +14,8 @@ export struct HomeInventoryDeviceInfoBar {
     displayName: '',
     detailLine: '',
     extraLine: '',
-    rssi: 0
+    rssi: 0,
+    linkState: DeviceLinkState.Discovered
   };
   /** 空状态左右内边距。默认 16vp；横屏右栏传 0，与通栏扫描按钮对齐。 */
   @Prop emptyStateHorizontalPadding: number = 16;
@@ -53,6 +56,11 @@ export struct HomeInventoryDeviceInfoBar {
           Text(this.kindLabel())
             .fontSize(AppleTheme.FONT_CAPTION)
             .fontColor(this.device.kind === InventoryDeviceKind.Lan ? AppleTheme.LAN_TEXT : AppleTheme.PRIMARY)
+          if (this.device.linkState === DeviceLinkState.Connected) {
+            Text(ScanUiLabels.inventoryLinkConnected)
+              .fontSize(AppleTheme.FONT_CAPTION)
+              .fontColor(AppleTheme.PRIMARY)
+          }
         }
         .width('100%')
         Text(this.device.detailLine)
