@@ -13,6 +13,7 @@ import scanUiLabelsTest from './ScanUiLabels.test';
 import privacyDialogLayoutTest from './PrivacyDialogLayout.test';
 import workbenchTabPolicyTest from './WorkbenchTabPolicy.test';
 import workbenchShellStateTest from './WorkbenchShellState.test';
+import logEventBusTest from './LogEventBus.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -30,4 +31,5 @@ export default function testsuite() {
   privacyDialogLayoutTest();
   workbenchTabPolicyTest();
   workbenchShellStateTest();
+  logEventBusTest();
 }

@@ -323,6 +323,22 @@
     {
       "name": "workbench_status_connected",
       "value": "已连接"
+    },
+    {
+      "name": "workbench_btn_export",
+      "value": "导出"
+    },
+    {
+      "name": "workbench_log_empty",
+      "value": "暂无会话日志"
+    },
+    {
+      "name": "toast_export_failed",
+      "value": "无法导出日志"
+    },
+    {
+      "name": "a11y_export_log",
+      "value": "导出日志"
     }
   ]
 }

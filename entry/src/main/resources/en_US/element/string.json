@@ -323,6 +323,22 @@
     {
       "name": "workbench_status_connected",
       "value": "Connected"
+    },
+    {
+      "name": "workbench_btn_export",
+      "value": "Export"
+    },
+    {
+      "name": "workbench_log_empty",
+      "value": "No session logs yet"
+    },
+    {
+      "name": "toast_export_failed",
+      "value": "Unable to export log"
+    },
+    {
+      "name": "a11y_export_log",
+      "value": "Export session log"
     }
   ]
 }

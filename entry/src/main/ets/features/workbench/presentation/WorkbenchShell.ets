@@ -14,6 +14,7 @@ import {
 } from '../domain/WorkbenchShellState';
 import { WorkbenchSegmentedBar } from './WorkbenchSegmentedBar';
 import { OverviewTab } from './tabs/OverviewTab';
+import { LogTab } from './tabs/LogTab';
 
 @Component
 export struct WorkbenchShell {
@@ -114,6 +115,11 @@ export struct WorkbenchShell {
         onOpenGattDebug: (): void => {
           this.onOpenGattDebug();
         }
+      })
+    } else if (this.activeTab === WorkbenchTabId.Log) {
+      LogTab({
+        deviceKey: this.deviceKey,
+        kind: this.kind
       })
     } else {
       Column({ space: 8 }) {
