@@ -302,7 +302,7 @@ struct HomeInventory {
   scanFilterBar() {
     Column({ space: 6 }) {
       Row({ space: 8 }) {
-        TextInput({ placeholder: $r('app.string.inventory_filter_uuid'), text: $filterUuid })
+        TextInput({ placeholder: $r('app.string.inventory_filter_uuid'), text: this.filterUuid })
           .layoutWeight(1)
           .height(36)
           .fontSize(AppleTheme.FONT_CAPTION)
@@ -317,7 +317,7 @@ struct HomeInventory {
             this.filterUuid = value;
             this.applyScanFilter();
           })
-        TextInput({ placeholder: $r('app.string.inventory_filter_mfg'), text: $filterMfg })
+        TextInput({ placeholder: $r('app.string.inventory_filter_mfg'), text: this.filterMfg })
           .layoutWeight(1)
           .height(36)
           .fontSize(AppleTheme.FONT_CAPTION)
@@ -335,7 +335,7 @@ struct HomeInventory {
       }
       .width('100%')
       Row({ space: 8 }) {
-        Toggle({ type: ToggleType.Switch, isOn: $filterConnectableOnly })
+        Toggle({ type: ToggleType.Switch, isOn: this.filterConnectableOnly })
           .selectedColor(AppleTheme.PRIMARY)
           .accessibilityText($r('app.string.inventory_a11y_filter_connectable'))
           .onChange((isOn: boolean) => {

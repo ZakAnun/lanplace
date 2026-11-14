@@ -111,5 +111,29 @@ export default function scanFilterTest() {
       expect(current.manufacturerId).assertEqual('57:01');
       expect(current.connectableOnly).assertTrue();
     });
+
+    it('scanFilterBarOnChangeUsesPlainThisFieldsNotDollarRefs', 0, () => {
+      ScanFilterHolder.set(filterOf('180d', '99:99', true));
+      const stored: ScanFilter = ScanFilterHolder.current();
+      let filterUuid: string = stored.serviceUuid !== undefined ? stored.serviceUuid : '';
+      let filterMfg: string = stored.manufacturerId !== undefined ? stored.manufacturerId : '';
+      let filterConnectableOnly: boolean = stored.connectableOnly;
+      expect(filterUuid).assertEqual('180d');
+      expect(filterMfg).assertEqual('99:99');
+      expect(filterConnectableOnly).assertTrue();
+
+      filterUuid = '180a';
+      filterMfg = '57:01';
+      filterConnectableOnly = false;
+      ScanFilterHolder.set({
+        serviceUuid: filterUuid,
+        manufacturerId: filterMfg,
+        connectableOnly: filterConnectableOnly
+      });
+      const applied: ScanFilter = ScanFilterHolder.current();
+      expect(applied.serviceUuid).assertEqual('180a');
+      expect(applied.manufacturerId).assertEqual('57:01');
+      expect(applied.connectableOnly).assertFalse();
+    });
   });
 }
