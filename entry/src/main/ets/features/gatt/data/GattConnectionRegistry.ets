@@ -1,4 +1,5 @@
 import { BleGattSession } from '../domain/BleGattSession';
+import { GattCharacteristicNode, GattServiceNode } from '../domain/GattProfile';
 import { GattSessionPhase } from '../domain/GattSessionPhase';
 
 export class GattConnectionRegistry {
@@ -48,6 +49,36 @@ export class GattConnectionRegistry {
     }
     if (session.services !== undefined) {
       copy.services = session.services.slice();
+    }
+    if (session.profile !== undefined) {
+      copy.profile = GattConnectionRegistry.cloneProfile(session.profile);
+    }
+    return copy;
+  }
+
+  private static cloneProfile(profile: GattServiceNode[]): GattServiceNode[] {
+    const copy: GattServiceNode[] = [];
+    for (let i = 0; i < profile.length; i++) {
+      const chars: GattCharacteristicNode[] = [];
+      const source: GattCharacteristicNode[] = profile[i].characteristics;
+      for (let j = 0; j < source.length; j++) {
+        const item: GattCharacteristicNode = source[j];
+        const cloned: GattCharacteristicNode = {
+          serviceUuid: item.serviceUuid,
+          characteristicUuid: item.characteristicUuid,
+          canRead: item.canRead,
+          canWrite: item.canWrite,
+          canWriteNoResponse: item.canWriteNoResponse,
+          canNotify: item.canNotify,
+          canIndicate: item.canIndicate
+        };
+        chars.push(cloned);
+      }
+      const node: GattServiceNode = {
+        serviceUuid: profile[i].serviceUuid,
+        characteristics: chars
+      };
+      copy.push(node);
     }
     return copy;
   }

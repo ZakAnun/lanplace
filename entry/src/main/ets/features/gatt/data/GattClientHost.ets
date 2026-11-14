@@ -1,9 +1,11 @@
 import { GATT_ERROR_TIMEOUT, GattOperationError } from '../domain/GattFacade';
 import { BleGattSession } from '../domain/BleGattSession';
 import { GattConnectionRegistry } from './GattConnectionRegistry';
+import { GattServiceNode, GattValueEvent, GattValueListener } from '../domain/GattProfile';
 import {
   GATT_PROFILE_STATE_CONNECTED,
   GATT_PROFILE_STATE_DISCONNECTED,
+  GattHandleValueCallback,
   GattLinkStateEvent,
   IGattClientFactory,
   IGattClientHandle,
@@ -41,6 +43,9 @@ export class GattClientHost implements IGattTransport {
   private readonly factory: IGattClientFactory;
   private readonly clients: Map<string, IGattClientHandle> = new Map();
   private readonly waiters: Map<string, ConnectWaiter> = new Map();
+  private readonly profiles: Map<string, GattServiceNode[]> = new Map();
+  private readonly valueCallbacks: Map<string, GattHandleValueCallback> = new Map();
+  private valueListener: GattValueListener | null = null;
   private readonly onConnectionStateChange = (state: GattLinkStateEvent): void => {
     this.handleConnectionState(state);
   };
@@ -69,6 +74,7 @@ export class GattClientHost implements IGattTransport {
       }
       this.clients.set(deviceId, client);
       try {
+        this.watchValues(deviceId, client);
         client.on('BLEConnectionStateChange', this.onConnectionStateChange);
         client.connect();
       } catch (err) {
@@ -88,6 +94,8 @@ export class GattClientHost implements IGattTransport {
       client.off('BLEConnectionStateChange', this.onConnectionStateChange);
     } catch (_offErr) {
     }
+    this.silenceValue(deviceId, client);
+    this.profiles.delete(deviceId);
     try {
       client.disconnect();
     } catch (err) {
@@ -115,6 +123,71 @@ export class GattClientHost implements IGattTransport {
     }
   }
 
+  services(deviceId: string): GattServiceNode[] {
+    const found: GattServiceNode[] | undefined = this.profiles.get(deviceId);
+    if (found === undefined) {
+      const empty: GattServiceNode[] = [];
+      return empty;
+    }
+    return found;
+  }
+
+  async readCharacteristicValue(
+    deviceId: string,
+    serviceUuid: string,
+    characteristicUuid: string
+  ): Promise<Uint8Array> {
+    const client: IGattClientHandle | undefined = this.clients.get(deviceId);
+    if (client === undefined) {
+      throw new GattOperationError(-1, 'missing client');
+    }
+    try {
+      return await client.readCharacteristicValue(serviceUuid, characteristicUuid);
+    } catch (err) {
+      throw this.asGattError(err as Object);
+    }
+  }
+
+  async writeCharacteristicValue(
+    deviceId: string,
+    serviceUuid: string,
+    characteristicUuid: string,
+    value: Uint8Array,
+    writeNoResponse: boolean
+  ): Promise<void> {
+    const client: IGattClientHandle | undefined = this.clients.get(deviceId);
+    if (client === undefined) {
+      throw new GattOperationError(-1, 'missing client');
+    }
+    try {
+      await client.writeCharacteristicValue(serviceUuid, characteristicUuid, value, writeNoResponse);
+    } catch (err) {
+      throw this.asGattError(err as Object);
+    }
+  }
+
+  async setCharacteristicChangeNotification(
+    deviceId: string,
+    serviceUuid: string,
+    characteristicUuid: string,
+    enable: boolean,
+    indicate: boolean
+  ): Promise<void> {
+    const client: IGattClientHandle | undefined = this.clients.get(deviceId);
+    if (client === undefined) {
+      throw new GattOperationError(-1, 'missing client');
+    }
+    try {
+      await client.setCharacteristicChangeNotification(serviceUuid, characteristicUuid, enable, indicate);
+    } catch (err) {
+      throw this.asGattError(err as Object);
+    }
+  }
+
+  onCharacteristicValue(callback: GattValueListener): void {
+    this.valueListener = callback;
+  }
+
   private handleConnectionState(state: GattLinkStateEvent): void {
     const waiter: ConnectWaiter | undefined = this.waiters.get(state.deviceId);
     if (waiter === undefined || waiter.settled) {
@@ -131,7 +204,12 @@ export class GattClientHost implements IGattTransport {
         this.dropClient(state.deviceId);
         return;
       }
-      client.getServices().then((uuids: string[]): void => {
+      client.getServices().then((nodes: GattServiceNode[]): void => {
+        this.profiles.set(state.deviceId, nodes);
+        const uuids: string[] = [];
+        for (let i = 0; i < nodes.length; i++) {
+          uuids.push(nodes[i].serviceUuid);
+        }
         waiter.resolve(uuids);
         this.waiters.delete(state.deviceId);
       }).catch((err: Object): void => {
@@ -164,6 +242,8 @@ export class GattClientHost implements IGattTransport {
       client.off('BLEConnectionStateChange', this.onConnectionStateChange);
     } catch (_offErr) {
     }
+    this.silenceValue(deviceId, client);
+    this.profiles.delete(deviceId);
     try {
       client.disconnect();
     } catch (_disconnectErr) {
@@ -173,6 +253,49 @@ export class GattClientHost implements IGattTransport {
     } catch (_closeErr) {
     }
     this.clients.delete(deviceId);
+  }
+
+  private watchValues(deviceId: string, client: IGattClientHandle): void {
+    const callback: GattHandleValueCallback = (
+      serviceUuid: string,
+      characteristicUuid: string,
+      value: Uint8Array
+    ): void => {
+      this.publishValue(deviceId, serviceUuid, characteristicUuid, value);
+    };
+    this.valueCallbacks.set(deviceId, callback);
+    client.onCharacteristicChange(callback);
+  }
+
+  private silenceValue(deviceId: string, client: IGattClientHandle): void {
+    const callback: GattHandleValueCallback | undefined = this.valueCallbacks.get(deviceId);
+    if (callback === undefined) {
+      return;
+    }
+    try {
+      client.offCharacteristicChange(callback);
+    } catch (_offErr) {
+    }
+    this.valueCallbacks.delete(deviceId);
+  }
+
+  private publishValue(
+    deviceId: string,
+    serviceUuid: string,
+    characteristicUuid: string,
+    value: Uint8Array
+  ): void {
+    const listener: GattValueListener | null = this.valueListener;
+    if (listener === null) {
+      return;
+    }
+    const event: GattValueEvent = {
+      deviceId: deviceId,
+      serviceUuid: serviceUuid,
+      characteristicUuid: characteristicUuid,
+      value: value
+    };
+    listener(event);
   }
 
   private asGattError(err: Object): GattOperationError {

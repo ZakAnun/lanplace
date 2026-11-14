@@ -10,11 +10,13 @@ import {
   gattFailureResource
 } from '../main/ets/features/gatt/domain/GattFacade';
 import { GattConnectionRegistry } from '../main/ets/features/gatt/data/GattConnectionRegistry';
+import { GattServiceNode, GattValueListener } from '../main/ets/features/gatt/domain/GattProfile';
 import { DefaultGattFacade } from '../main/ets/features/gatt/data/DefaultGattFacade';
 import { GattClientHost } from '../main/ets/features/gatt/data/GattClientHost';
 import {
   GATT_PROFILE_STATE_DISCONNECTED,
   GattClock,
+  GattHandleValueCallback,
   GattLinkStateCallback,
   GattLinkStateEvent,
   IGattClientFactory,
@@ -77,9 +79,34 @@ class ScriptedGattHandle implements IGattClientHandle {
     this.closed = true;
   }
 
-  getServices(): Promise<string[]> {
-    return new Promise<string[]>((_resolve: (value: string[]) => void): void => {
+  getServices(): Promise<GattServiceNode[]> {
+    return new Promise<GattServiceNode[]>((_resolve: (value: GattServiceNode[]) => void): void => {
     });
+  }
+
+  readCharacteristicValue(
+    _serviceUuid: string,
+    _characteristicUuid: string
+  ): Promise<Uint8Array> {
+    return Promise.resolve(new Uint8Array(0));
+  }
+
+  writeCharacteristicValue(
+    _serviceUuid: string,
+    _characteristicUuid: string,
+    _value: Uint8Array,
+    _writeNoResponse: boolean
+  ): Promise<void> {
+    return Promise.resolve();
+  }
+
+  setCharacteristicChangeNotification(
+    _serviceUuid: string,
+    _characteristicUuid: string,
+    _enable: boolean,
+    _indicate: boolean
+  ): Promise<void> {
+    return Promise.resolve();
   }
 
   on(_type: string, callback: GattLinkStateCallback): void {
@@ -88,6 +115,12 @@ class ScriptedGattHandle implements IGattClientHandle {
 
   off(_type: string, _callback: GattLinkStateCallback): void {
     this.listener = null;
+  }
+
+  onCharacteristicChange(_callback: GattHandleValueCallback): void {
+  }
+
+  offCharacteristicChange(_callback: GattHandleValueCallback): void {
   }
 
   emitDisconnected(deviceId: string): void {
@@ -137,6 +170,42 @@ class ScriptedGattTransport implements IGattTransport, IGattClientFactory {
 
   cancelConnect(_deviceId: string): void {
     this.cancelled = true;
+  }
+
+  services(_deviceId: string): GattServiceNode[] {
+    const empty: GattServiceNode[] = [];
+    return empty;
+  }
+
+  readCharacteristicValue(
+    _deviceId: string,
+    _serviceUuid: string,
+    _characteristicUuid: string
+  ): Promise<Uint8Array> {
+    return Promise.resolve(new Uint8Array(0));
+  }
+
+  writeCharacteristicValue(
+    _deviceId: string,
+    _serviceUuid: string,
+    _characteristicUuid: string,
+    _value: Uint8Array,
+    _writeNoResponse: boolean
+  ): Promise<void> {
+    return Promise.resolve();
+  }
+
+  setCharacteristicChangeNotification(
+    _deviceId: string,
+    _serviceUuid: string,
+    _characteristicUuid: string,
+    _enable: boolean,
+    _indicate: boolean
+  ): Promise<void> {
+    return Promise.resolve();
+  }
+
+  onCharacteristicValue(_callback: GattValueListener): void {
   }
 }
 

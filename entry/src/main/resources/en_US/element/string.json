@@ -419,6 +419,42 @@
     {
       "name": "toast_gatt_max_connections",
       "value": "Connection limit reached. Disconnect another device first."
+    },
+    {
+      "name": "gatt_write_hex",
+      "value": "Write hex"
+    },
+    {
+      "name": "gatt_read",
+      "value": "Read"
+    },
+    {
+      "name": "gatt_notify",
+      "value": "Notify"
+    },
+    {
+      "name": "gatt_services_empty",
+      "value": "No services"
+    },
+    {
+      "name": "gatt_value_empty",
+      "value": "No value yet"
+    },
+    {
+      "name": "gatt_error_invalid_hex",
+      "value": "Invalid hex"
+    },
+    {
+      "name": "gatt_error_read",
+      "value": "Read failed"
+    },
+    {
+      "name": "gatt_error_write",
+      "value": "Write failed"
+    },
+    {
+      "name": "gatt_error_notify",
+      "value": "Notify failed"
     }
   ]
 }

@@ -1,3 +1,5 @@
+import { GattServiceNode, GattValueListener } from './GattProfile';
+
 export const GATT_CONNECT_TIMEOUT_MS: number = 30000;
 export const GATT_ERROR_MAX_CONNECTIONS: number = 2900006;
 export const GATT_ERROR_TIMEOUT: number = -100;
@@ -41,6 +43,22 @@ export interface GattFacadeApi {
   connect(deviceId: string): Promise<void>;
   disconnect(deviceId: string): Promise<void>;
   isConnected(deviceId: string): boolean;
+  profile(deviceId: string): GattServiceNode[];
+  readCharacteristicValue(deviceId: string, serviceUuid: string, characteristicUuid: string): Promise<Uint8Array>;
+  writeCharacteristicValue(
+    deviceId: string,
+    serviceUuid: string,
+    characteristicUuid: string,
+    value: Uint8Array
+  ): Promise<void>;
+  setCharacteristicChangeNotification(
+    deviceId: string,
+    serviceUuid: string,
+    characteristicUuid: string,
+    enable: boolean
+  ): Promise<void>;
+  subscribeValues(listener: GattValueListener): void;
+  unsubscribeValues(listener: GattValueListener): void;
 }
 
 export class GattFacade {
@@ -76,5 +94,68 @@ export class GattFacade {
       return false;
     }
     return impl.isConnected(deviceId);
+  }
+
+  static profile(deviceId: string): GattServiceNode[] {
+    const impl: GattFacadeApi | null = GattFacade.impl;
+    if (impl === null) {
+      const empty: GattServiceNode[] = [];
+      return empty;
+    }
+    return impl.profile(deviceId);
+  }
+
+  static readCharacteristicValue(
+    deviceId: string,
+    serviceUuid: string,
+    characteristicUuid: string
+  ): Promise<Uint8Array> {
+    const impl: GattFacadeApi | null = GattFacade.impl;
+    if (impl === null) {
+      return Promise.reject(new GattOperationError(-1, 'unbound'));
+    }
+    return impl.readCharacteristicValue(deviceId, serviceUuid, characteristicUuid);
+  }
+
+  static writeCharacteristicValue(
+    deviceId: string,
+    serviceUuid: string,
+    characteristicUuid: string,
+    value: Uint8Array
+  ): Promise<void> {
+    const impl: GattFacadeApi | null = GattFacade.impl;
+    if (impl === null) {
+      return Promise.reject(new GattOperationError(-1, 'unbound'));
+    }
+    return impl.writeCharacteristicValue(deviceId, serviceUuid, characteristicUuid, value);
+  }
+
+  static setCharacteristicChangeNotification(
+    deviceId: string,
+    serviceUuid: string,
+    characteristicUuid: string,
+    enable: boolean
+  ): Promise<void> {
+    const impl: GattFacadeApi | null = GattFacade.impl;
+    if (impl === null) {
+      return Promise.reject(new GattOperationError(-1, 'unbound'));
+    }
+    return impl.setCharacteristicChangeNotification(deviceId, serviceUuid, characteristicUuid, enable);
+  }
+
+  static subscribeValues(listener: GattValueListener): void {
+    const impl: GattFacadeApi | null = GattFacade.impl;
+    if (impl === null) {
+      return;
+    }
+    impl.subscribeValues(listener);
+  }
+
+  static unsubscribeValues(listener: GattValueListener): void {
+    const impl: GattFacadeApi | null = GattFacade.impl;
+    if (impl === null) {
+      return;
+    }
+    impl.unsubscribeValues(listener);
   }
 }

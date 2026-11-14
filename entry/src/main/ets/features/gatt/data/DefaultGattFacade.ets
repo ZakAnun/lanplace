@@ -1,4 +1,7 @@
+import { bytesToHex } from '../../../shared/ble/BytesHex';
 import { BleGattSession } from '../domain/BleGattSession';
+import { GattCharacteristicNode, GattServiceNode, GattValueEvent, GattValueListener } from '../domain/GattProfile';
+import { GattWriteQueue } from '../domain/GattWriteQueue';
 import {
   GATT_CONNECT_TIMEOUT_MS,
   GATT_ERROR_TIMEOUT,
@@ -53,10 +56,22 @@ function connectWithDeadline(
 export class DefaultGattFacade implements GattFacadeApi {
   private readonly transport: IGattTransport;
   private readonly clock: GattClock;
+  private readonly listeners: GattValueListener[] = [];
+  private readonly writeQueues: Map<string, GattWriteQueue> = new Map();
 
   constructor(transport: IGattTransport, clock?: GattClock) {
     this.transport = transport;
     this.clock = clock !== undefined ? clock : new SystemGattClock();
+    this.transport.onCharacteristicValue((event: GattValueEvent): void => {
+      this.append(
+        event.deviceId,
+        LogEventType.GATT_NOTIFY,
+        `${event.characteristicUuid} ${bytesToHex(event.value)}`
+      );
+      for (let i = 0; i < this.listeners.length; i++) {
+        this.listeners[i](event);
+      }
+    });
   }
 
   async connect(deviceId: string): Promise<void> {
@@ -74,10 +89,12 @@ export class DefaultGattFacade implements GattFacadeApi {
           this.transport.cancelConnect(deviceId);
         }
       );
+      const profile: GattServiceNode[] = this.transport.services(deviceId);
       const connected: BleGattSession = {
         deviceId: deviceId,
         phase: 'Connected',
-        services: services
+        services: services,
+        profile: profile
       };
       GattConnectionRegistry.register(connected);
       this.append(deviceId, LogEventType.GATT_CONNECT, 'connected');
@@ -101,6 +118,138 @@ export class DefaultGattFacade implements GattFacadeApi {
       return false;
     }
     return found.phase === 'Connected';
+  }
+
+  profile(deviceId: string): GattServiceNode[] {
+    const found: BleGattSession | null = GattConnectionRegistry.get(deviceId);
+    if (found === null || found.profile === undefined) {
+      const empty: GattServiceNode[] = [];
+      return empty;
+    }
+    return found.profile;
+  }
+
+  async readCharacteristicValue(
+    deviceId: string,
+    serviceUuid: string,
+    characteristicUuid: string
+  ): Promise<Uint8Array> {
+    try {
+      return await this.transport.readCharacteristicValue(deviceId, serviceUuid, characteristicUuid);
+    } catch (err) {
+      const gattErr: GattOperationError = asGattOperationError(err as Object);
+      this.append(deviceId, LogEventType.GATT_ERROR, `code=${gattErr.code} read ${characteristicUuid}`);
+      throw gattErr;
+    }
+  }
+
+  writeCharacteristicValue(
+    deviceId: string,
+    serviceUuid: string,
+    characteristicUuid: string,
+    value: Uint8Array
+  ): Promise<void> {
+    const writeNoResponse: boolean = this.useWriteNoResponse(deviceId, serviceUuid, characteristicUuid);
+    return this.queueFor(deviceId).enqueue((): Promise<void> => {
+      return this.transport.writeCharacteristicValue(
+        deviceId,
+        serviceUuid,
+        characteristicUuid,
+        value,
+        writeNoResponse
+      ).then((): void => {
+        return;
+      }, (err: Object): Promise<void> => {
+        const gattErr: GattOperationError = asGattOperationError(err);
+        this.append(deviceId, LogEventType.GATT_ERROR, `code=${gattErr.code} write ${characteristicUuid}`);
+        return Promise.reject(gattErr);
+      });
+    });
+  }
+
+  async setCharacteristicChangeNotification(
+    deviceId: string,
+    serviceUuid: string,
+    characteristicUuid: string,
+    enable: boolean
+  ): Promise<void> {
+    const indicate: boolean = this.useIndicate(deviceId, serviceUuid, characteristicUuid);
+    try {
+      await this.transport.setCharacteristicChangeNotification(
+        deviceId,
+        serviceUuid,
+        characteristicUuid,
+        enable,
+        indicate
+      );
+    } catch (err) {
+      const gattErr: GattOperationError = asGattOperationError(err as Object);
+      this.append(deviceId, LogEventType.GATT_ERROR, `code=${gattErr.code} notify ${characteristicUuid}`);
+      throw gattErr;
+    }
+  }
+
+  subscribeValues(listener: GattValueListener): void {
+    this.listeners.push(listener);
+  }
+
+  unsubscribeValues(listener: GattValueListener): void {
+    const next: GattValueListener[] = [];
+    for (let i = 0; i < this.listeners.length; i++) {
+      if (this.listeners[i] !== listener) {
+        next.push(this.listeners[i]);
+      }
+    }
+    this.listeners.length = 0;
+    for (let i = 0; i < next.length; i++) {
+      this.listeners.push(next[i]);
+    }
+  }
+
+  private queueFor(deviceId: string): GattWriteQueue {
+    const found: GattWriteQueue | undefined = this.writeQueues.get(deviceId);
+    if (found !== undefined) {
+      return found;
+    }
+    const created: GattWriteQueue = new GattWriteQueue();
+    this.writeQueues.set(deviceId, created);
+    return created;
+  }
+
+  private findCharacteristic(
+    deviceId: string,
+    serviceUuid: string,
+    characteristicUuid: string
+  ): GattCharacteristicNode | null {
+    const profile: GattServiceNode[] = this.profile(deviceId);
+    for (let i = 0; i < profile.length; i++) {
+      if (profile[i].serviceUuid !== serviceUuid) {
+        continue;
+      }
+      const chars: GattCharacteristicNode[] = profile[i].characteristics;
+      for (let j = 0; j < chars.length; j++) {
+        if (chars[j].characteristicUuid === characteristicUuid) {
+          return chars[j];
+        }
+      }
+    }
+    return null;
+  }
+
+  private useWriteNoResponse(deviceId: string, serviceUuid: string, characteristicUuid: string): boolean {
+    const node: GattCharacteristicNode | null = this.findCharacteristic(deviceId, serviceUuid, characteristicUuid);
+    if (node === null || node.canWrite) {
+      return false;
+    }
+    return node.canWriteNoResponse;
+  }
+
+  private useIndicate(deviceId: string, serviceUuid: string, characteristicUuid: string): boolean {
+    const node: GattCharacteristicNode | null = this.findCharacteristic(deviceId, serviceUuid, characteristicUuid);
+    if (node === null) {
+      return false;
+    }
+    return node.canIndicate && !node.canNotify;
   }
 
   private append(deviceId: string, type: string, message: string): void {

@@ -21,6 +21,7 @@ import {
 import { WorkbenchSegmentedBar } from './WorkbenchSegmentedBar';
 import { OverviewTab } from './tabs/OverviewTab';
 import { AdvertTab } from './tabs/AdvertTab';
+import { GattTab } from './tabs/GattTab';
 import { LogTab } from './tabs/LogTab';
 
 @Component
@@ -181,6 +182,10 @@ export struct WorkbenchShell {
       })
     } else if (this.activeTab === WorkbenchTabId.Advert) {
       AdvertTab({
+        deviceKey: this.deviceKey
+      })
+    } else if (this.activeTab === WorkbenchTabId.Gatt) {
+      GattTab({
         deviceKey: this.deviceKey
       })
     } else if (this.activeTab === WorkbenchTabId.Log) {

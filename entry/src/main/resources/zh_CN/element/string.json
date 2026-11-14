@@ -419,6 +419,42 @@
     {
       "name": "toast_gatt_max_connections",
       "value": "已达本机连接上限，请先断开其他设备"
+    },
+    {
+      "name": "gatt_write_hex",
+      "value": "写入 Hex"
+    },
+    {
+      "name": "gatt_read",
+      "value": "读取"
+    },
+    {
+      "name": "gatt_notify",
+      "value": "订阅通知"
+    },
+    {
+      "name": "gatt_services_empty",
+      "value": "未发现服务"
+    },
+    {
+      "name": "gatt_value_empty",
+      "value": "尚无数据"
+    },
+    {
+      "name": "gatt_error_invalid_hex",
+      "value": "Hex 格式无效"
+    },
+    {
+      "name": "gatt_error_read",
+      "value": "读取失败"
+    },
+    {
+      "name": "gatt_error_write",
+      "value": "写入失败"
+    },
+    {
+      "name": "gatt_error_notify",
+      "value": "订阅失败"
     }
   ]
 }

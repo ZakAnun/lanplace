@@ -19,6 +19,10 @@ import advertHistoryTest from './AdvertHistory.test';
 import scanFilterTest from './ScanFilter.test';
 import gattConnectionRegistryTest from './GattConnectionRegistry.test';
 import gattConnectTest from './GattConnect.test';
+import bytesHexTest from './BytesHex.test';
+import sigCharacteristicNamesTest from './SigCharacteristicNames.test';
+import gattWriteQueueTest from './GattWriteQueue.test';
+import gattReadWriteTest from './GattReadWrite.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -42,4 +46,8 @@ export default function testsuite() {
   scanFilterTest();
   gattConnectionRegistryTest();
   gattConnectTest();
+  bytesHexTest();
+  sigCharacteristicNamesTest();
+  gattWriteQueueTest();
+  gattReadWriteTest();
 }
