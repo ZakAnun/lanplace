@@ -18,6 +18,7 @@ import { ScanUiLabels } from '../../../shared/platform/ScanUiLabels';
 import { GattFacade } from '../../gatt/domain/GattFacade';
 import { BleScanCoordinator } from './BleScanCoordinator';
 import { BLE_SCAN_STOP_QUIET } from './BleScanService';
+import { formatLanExtraLine } from '../../lan/domain/ProbeTypes';
 import { LanDiscoveredDevice, MdnsScanService } from './MdnsScanService';
 
 type InventoryUpdateCallback = (devices: HomeInventoryDevice[]) => void;
@@ -65,7 +66,7 @@ export class HomeInventoryCoordinator {
         kind: InventoryDeviceKind.Lan,
         displayName: d.displayName,
         detailLine: `${d.hostAddress}:${d.port}`,
-        extraLine: d.serviceTypes.join(' · '),
+        extraLine: formatLanExtraLine(d.serviceTypes, d.txtLine),
         rssi: 0,
         linkState: DeviceLinkState.Discovered
       });

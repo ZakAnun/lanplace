@@ -459,6 +459,46 @@
     {
       "name": "gatt_error_notify",
       "value": "订阅失败"
+    },
+    {
+      "name": "workbench_lan_host",
+      "value": "地址"
+    },
+    {
+      "name": "workbench_lan_services",
+      "value": "服务 / TXT"
+    },
+    {
+      "name": "workbench_lan_btn_tcp",
+      "value": "TCP 探测"
+    },
+    {
+      "name": "workbench_lan_btn_http",
+      "value": "HTTP GET"
+    },
+    {
+      "name": "workbench_lan_probing",
+      "value": "探测中…"
+    },
+    {
+      "name": "workbench_lan_tcp_result",
+      "value": "TCP"
+    },
+    {
+      "name": "workbench_lan_http_result",
+      "value": "HTTP"
+    },
+    {
+      "name": "workbench_lan_empty_target",
+      "value": "缺少主机或端口"
+    },
+    {
+      "name": "a11y_lan_tcp_probe",
+      "value": "TCP 端口探测"
+    },
+    {
+      "name": "a11y_lan_http_probe",
+      "value": "HTTP GET 探测"
     }
   ]
 }

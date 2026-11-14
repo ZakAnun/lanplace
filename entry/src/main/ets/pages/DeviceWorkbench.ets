@@ -14,6 +14,7 @@ struct DeviceWorkbench {
   @State kind: InventoryDeviceKind = InventoryDeviceKind.Ble;
   @State displayName: string = '';
   @State detailLine: string = '';
+  @State extraLine: string = '';
   @State initialTab: WorkbenchTabId = WorkbenchTabId.Overview;
 
   aboutToAppear(): void {
@@ -37,10 +38,12 @@ struct DeviceWorkbench {
         this.kind = snapshot[i].kind;
         this.displayName = snapshot[i].displayName;
         this.detailLine = snapshot[i].detailLine;
+        this.extraLine = snapshot[i].extraLine;
         return;
       }
     }
     this.detailLine = '';
+    this.extraLine = '';
     if (this.deviceKey.indexOf('lan:') === 0) {
       this.kind = InventoryDeviceKind.Lan;
     } else {
@@ -55,6 +58,7 @@ struct DeviceWorkbench {
         kind: this.kind,
         displayName: this.displayName,
         detailLine: this.detailLine,
+        extraLine: this.extraLine,
         initialTab: this.initialTab
       })
         .width('100%')

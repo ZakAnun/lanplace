@@ -9,6 +9,7 @@ export interface LanDiscoveredDevice {
   serviceTypes: string[];
   hostAddress: string;
   port: number;
+  txtLine: string;
 }
 
 type LanUpdateCallback = (devices: LanDiscoveredDevice[]) => void;
@@ -27,14 +28,16 @@ const MOCK_LAN: LanDiscoveredDevice[] = [
     displayName: '客厅电视 (Cast)',
     serviceTypes: ['_googlecast._tcp'],
     hostAddress: '192.168.1.20',
-    port: 8009
+    port: 8009,
+    txtLine: 'fn=Living Room TV'
   },
   {
     deviceKey: 'lan:host:192.168.1.30',
     displayName: '书房打印机',
     serviceTypes: ['_ipp._tcp'],
     hostAddress: '192.168.1.30',
-    port: 631
+    port: 631,
+    txtLine: 'ty=Printer'
   }
 ];
 
@@ -58,6 +61,36 @@ export class MdnsScanService {
     MdnsScanService.onUpdate(list);
   }
 
+  private static mergeTxt(current: string, extra: string): string {
+    if (extra.length === 0) {
+      return current;
+    }
+    if (current.length === 0) {
+      return extra;
+    }
+    if (current.indexOf(extra) >= 0) {
+      return current;
+    }
+    return `${current} ${extra}`;
+  }
+
+  private static txtFromAttributes(attrs: Array<mdns.ServiceAttribute> | undefined): string {
+    if (attrs === undefined || attrs.length === 0) {
+      return '';
+    }
+    const parts: string[] = [];
+    for (let i = 0; i < attrs.length; i++) {
+      const key: string = attrs[i].key;
+      const value: string = printableTxtBytes(attrs[i].value);
+      if (value.length === 0) {
+        parts.push(key);
+      } else {
+        parts.push(`${key}=${value}`);
+      }
+    }
+    return parts.join(' ');
+  }
+
   private static mergeServiceType(types: string[], serviceType: string): string[] {
     for (let i = 0; i < types.length; i++) {
       if (types[i] === serviceType) {
@@ -76,6 +109,7 @@ export class MdnsScanService {
       return;
     }
     const port = resolved.port ?? 0;
+    const txtLine = MdnsScanService.txtFromAttributes(resolved.serviceAttribute);
     const key = MdnsScanService.hostDeviceKey(host);
     const existing = MdnsScanService.deviceMap.get(key);
     if (existing !== undefined) {
@@ -87,7 +121,8 @@ export class MdnsScanService {
         displayName,
         serviceTypes,
         hostAddress: host,
-        port: usePort
+        port: usePort,
+        txtLine: MdnsScanService.mergeTxt(existing.txtLine, txtLine)
       });
     } else {
       MdnsScanService.deviceMap.set(key, {
@@ -95,7 +130,8 @@ export class MdnsScanService {
         displayName: name,
         serviceTypes: [serviceType],
         hostAddress: host,
-        port
+        port,
+        txtLine
       });
     }
     MdnsScanService.emitUpdate();
@@ -148,7 +184,8 @@ export class MdnsScanService {
               displayName: entry.displayName,
               serviceTypes: nextTypes,
               hostAddress: entry.hostAddress,
-              port: entry.port
+              port: entry.port,
+              txtLine: entry.txtLine
             });
           }
         });
@@ -206,4 +243,15 @@ export class MdnsScanService {
     MdnsScanService.discoveries = [];
     MdnsScanService.onUpdate = () => {};
   }
+}
+
+function printableTxtBytes(bytes: Array<number>): string {
+  let out: string = '';
+  for (let i = 0; i < bytes.length; i++) {
+    const code: number = bytes[i];
+    if (code >= 32 && code < 127) {
+      out += String.fromCharCode(code);
+    }
+  }
+  return out;
 }

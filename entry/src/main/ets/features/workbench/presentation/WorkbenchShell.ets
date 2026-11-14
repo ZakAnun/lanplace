@@ -22,6 +22,7 @@ import { WorkbenchSegmentedBar } from './WorkbenchSegmentedBar';
 import { OverviewTab } from './tabs/OverviewTab';
 import { AdvertTab } from './tabs/AdvertTab';
 import { GattTab } from './tabs/GattTab';
+import { LanTab } from './tabs/LanTab';
 import { LogTab } from './tabs/LogTab';
 
 @Component
@@ -30,6 +31,7 @@ export struct WorkbenchShell {
   @Prop kind: InventoryDeviceKind = InventoryDeviceKind.Ble;
   @Prop displayName: string = '';
   @Prop detailLine: string = '';
+  @Prop extraLine: string = '';
   @Prop initialTab: WorkbenchTabId = WorkbenchTabId.Overview;
   @State activeTab: WorkbenchTabId = WorkbenchTabId.Overview;
   @State gattConnected: boolean = false;
@@ -187,6 +189,12 @@ export struct WorkbenchShell {
     } else if (this.activeTab === WorkbenchTabId.Gatt) {
       GattTab({
         deviceKey: this.deviceKey
+      })
+    } else if (this.activeTab === WorkbenchTabId.Lan) {
+      LanTab({
+        deviceKey: this.deviceKey,
+        detailLine: this.detailLine,
+        extraLine: this.extraLine
       })
     } else if (this.activeTab === WorkbenchTabId.Log) {
       LogTab({

@@ -459,6 +459,46 @@
     {
       "name": "gatt_error_notify",
       "value": "Notify failed"
+    },
+    {
+      "name": "workbench_lan_host",
+      "value": "Address"
+    },
+    {
+      "name": "workbench_lan_services",
+      "value": "Services / TXT"
+    },
+    {
+      "name": "workbench_lan_btn_tcp",
+      "value": "TCP probe"
+    },
+    {
+      "name": "workbench_lan_btn_http",
+      "value": "HTTP GET"
+    },
+    {
+      "name": "workbench_lan_probing",
+      "value": "Probing…"
+    },
+    {
+      "name": "workbench_lan_tcp_result",
+      "value": "TCP"
+    },
+    {
+      "name": "workbench_lan_http_result",
+      "value": "HTTP"
+    },
+    {
+      "name": "workbench_lan_empty_target",
+      "value": "Missing host or port"
+    },
+    {
+      "name": "a11y_lan_tcp_probe",
+      "value": "Probe TCP port"
+    },
+    {
+      "name": "a11y_lan_http_probe",
+      "value": "Probe with HTTP GET"
     }
   ]
 }

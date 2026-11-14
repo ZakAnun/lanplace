@@ -24,6 +24,8 @@ import sigCharacteristicNamesTest from './SigCharacteristicNames.test';
 import gattWriteQueueTest from './GattWriteQueue.test';
 import gattReadWriteTest from './GattReadWrite.test';
 import mergeRegistryLinkStateTest from './mergeRegistryLinkState.test';
+import tcpProbeTest from './TcpProbe.test';
+import httpHeadProbeTest from './HttpHeadProbe.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -52,4 +54,6 @@ export default function testsuite() {
   gattWriteQueueTest();
   gattReadWriteTest();
   mergeRegistryLinkStateTest();
+  tcpProbeTest();
+  httpHeadProbeTest();
 }
