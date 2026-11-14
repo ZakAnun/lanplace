@@ -1,22 +1,46 @@
-import { InMemoryLogStore } from '../data/InMemoryLogStore';
 import { LogEvent, LogEventDomain } from './LogEvent';
 
+export interface LogEventStore {
+  append(event: LogEvent): void;
+  query(deviceKey: string, domain: LogEventDomain): LogEvent[];
+  exportText(deviceKey?: string): string;
+  clear(): void;
+}
+
 export class LogEventBus {
-  private static store: InMemoryLogStore = new InMemoryLogStore();
+  private static store: LogEventStore | null = null;
+
+  static bindStore(store: LogEventStore): void {
+    LogEventBus.store = store;
+  }
 
   static append(event: LogEvent): void {
-    LogEventBus.store.append(event);
+    const impl: LogEventStore | null = LogEventBus.store;
+    if (impl !== null) {
+      impl.append(event);
+    }
   }
 
   static query(deviceKey: string, domain: LogEventDomain): LogEvent[] {
-    return LogEventBus.store.query(deviceKey, domain);
+    const impl: LogEventStore | null = LogEventBus.store;
+    if (impl === null) {
+      return [];
+    }
+    return impl.query(deviceKey, domain);
   }
 
   static exportText(deviceKey?: string): string {
-    return LogEventBus.store.exportText(deviceKey);
+    const impl: LogEventStore | null = LogEventBus.store;
+    if (impl === null) {
+      return '';
+    }
+    return impl.exportText(deviceKey);
   }
 
   static clear(): void {
-    LogEventBus.store.clear();
+    const impl: LogEventStore | null = LogEventBus.store;
+    if (impl !== null) {
+      impl.clear();
+    }
   }
 }

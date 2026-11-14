@@ -1,8 +1,9 @@
 import { LogEvent, LogEventDomain } from '../domain/LogEvent';
+import { LogEventStore } from '../domain/LogEventBus';
 
 export const LOG_CAP: number = 500;
 
-export class InMemoryLogStore {
+export class InMemoryLogStore implements LogEventStore {
   private readonly byDevice: Map<string, LogEvent[]> = new Map();
 
   append(event: LogEvent): void {

@@ -2,7 +2,7 @@ import { describe, beforeEach, it, expect } from '@ohos/hypium';
 import { LogEvent, LogEventDomain } from '../main/ets/features/session-log/domain/LogEvent';
 import { LogEventType } from '../main/ets/features/session-log/domain/LogEventType';
 import { LogEventBus } from '../main/ets/features/session-log/domain/LogEventBus';
-import { LOG_CAP } from '../main/ets/features/session-log/data/InMemoryLogStore';
+import { InMemoryLogStore, LOG_CAP } from '../main/ets/features/session-log/data/InMemoryLogStore';
 
 function logEvent(
   deviceKey: string,
@@ -24,7 +24,17 @@ function logEvent(
 export default function logEventBusTest() {
   describe('LogEventBus', () => {
     beforeEach(() => {
-      LogEventBus.clear();
+      LogEventBus.bindStore(new InMemoryLogStore());
+    });
+
+    it('usesBoundStoreForAppendAndQuery', 0, () => {
+      const domainBle: LogEventDomain = 'ble';
+      const store: InMemoryLogStore = new InMemoryLogStore();
+      LogEventBus.bindStore(store);
+      LogEventBus.append(logEvent('ble:bind', domainBle, LogEventType.GATT_CONNECT, 'bound', 1));
+      expect(store.query('ble:bind', domainBle).length).assertEqual(1);
+      expect(LogEventBus.query('ble:bind', domainBle).length).assertEqual(1);
+      expect(LogEventBus.query('ble:bind', domainBle)[0].message).assertEqual('bound');
     });
 
     it('queryReturnsOnlyMatchingDeviceKeyAndDomain', 0, () => {

@@ -4,6 +4,8 @@ import { window } from '@kit.ArkUI';
 import { AppleTheme } from '../shared/theme/AppleTheme';
 import { WindowLayoutStore } from '../shared/layout/WindowLayoutStore';
 import { HomeInventoryCoordinator } from '../features/discovery/data/HomeInventoryCoordinator';
+import { InMemoryLogStore } from '../features/session-log/data/InMemoryLogStore';
+import { LogEventBus } from '../features/session-log/domain/LogEventBus';
 
 const DOMAIN = 0x0000;
 const WINDOW_BG: string = '#FF' + AppleTheme.CANVAS.slice(1);
@@ -15,6 +17,7 @@ export default class EntryAbility extends UIAbility {
   };
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    LogEventBus.bindStore(new InMemoryLogStore());
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
   }
 
