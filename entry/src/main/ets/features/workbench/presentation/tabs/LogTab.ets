@@ -1,8 +1,10 @@
-import { common, Want } from '@kit.AbilityKit';
+import { common } from '@kit.AbilityKit';
+import { systemShare } from '@kit.ShareKit';
 import { AppleTheme } from '../../../../shared/theme/AppleTheme';
 import { InventoryDeviceKind } from '../../../discovery/domain/HomeInventoryDevice';
 import { LogEvent, LogEventDomain } from '../../../session-log/domain/LogEvent';
 import { LogEventBus } from '../../../session-log/domain/LogEventBus';
+import { buildLogSharePayload, LogSharePayload } from '../../../session-log/domain/LogSharePayload';
 
 @Component
 export struct LogTab {
@@ -29,20 +31,30 @@ export struct LogTab {
 
   private exportLogs(): void {
     const text: string = LogEventBus.exportText(this.deviceKey);
-    const want: Want = {
-      action: 'ohos.want.action.sendData',
-      type: 'text/plain',
-      parameters: {
-        'ohos.extra.param.key.contentTitle': 'BlueScopes',
-        'ohos.extra.param.key.shareAbstract': text
-      }
+    const payload: LogSharePayload = buildLogSharePayload(text);
+    const record: systemShare.SharedRecord = {
+      utd: payload.utd,
+      content: payload.content,
+      title: payload.title
     };
-    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    context.startAbility(want).catch(() => {
+    const data: systemShare.SharedData = new systemShare.SharedData(record);
+    const controller: systemShare.ShareController = new systemShare.ShareController(data);
+    const context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    const options: systemShare.ShareControllerOptions = {
+      selectionMode: systemShare.SelectionMode.SINGLE,
+      previewMode: systemShare.SharePreviewMode.DEFAULT
+    };
+    try {
+      controller.show(context, options).catch((): void => {
+        this.getUIContext().getPromptAction().showToast({
+          message: $r('app.string.toast_export_failed')
+        });
+      });
+    } catch (_err) {
       this.getUIContext().getPromptAction().showToast({
         message: $r('app.string.toast_export_failed')
       });
-    });
+    }
   }
 
   build() {

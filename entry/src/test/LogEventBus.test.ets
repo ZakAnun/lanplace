@@ -2,6 +2,12 @@ import { describe, beforeEach, it, expect } from '@ohos/hypium';
 import { LogEvent, LogEventDomain } from '../main/ets/features/session-log/domain/LogEvent';
 import { LogEventType } from '../main/ets/features/session-log/domain/LogEventType';
 import { LogEventBus } from '../main/ets/features/session-log/domain/LogEventBus';
+import {
+  buildLogSharePayload,
+  LOG_SHARE_PLAIN_TEXT,
+  LOG_SHARE_TITLE,
+  LogSharePayload
+} from '../main/ets/features/session-log/domain/LogSharePayload';
 import { InMemoryLogStore, LOG_CAP } from '../main/ets/features/session-log/data/InMemoryLogStore';
 
 function logEvent(
@@ -104,6 +110,19 @@ export default function logEventBusTest() {
       expect(dump).assertContain('scan');
       expect(dump).assertContain('lan:2');
       expect(dump).assertContain('probe');
+    });
+
+    it('sharePayloadPutsExportTextInContent', 0, () => {
+      const domainBle: LogEventDomain = 'ble';
+      LogEventBus.append(logEvent('ble:1', domainBle, LogEventType.GATT_CONNECT, 'alpha', 10));
+      const dump: string = LogEventBus.exportText('ble:1');
+      const payload: LogSharePayload = buildLogSharePayload(dump);
+      expect(payload.content).assertEqual(dump);
+      expect(payload.content).assertContain('alpha');
+      expect(payload.content).assertContain('ble:1');
+      expect(payload.utd).assertEqual(LOG_SHARE_PLAIN_TEXT);
+      expect(payload.title).assertEqual(LOG_SHARE_TITLE);
+      expect(payload.title === payload.content).assertFalse();
     });
   });
 }
