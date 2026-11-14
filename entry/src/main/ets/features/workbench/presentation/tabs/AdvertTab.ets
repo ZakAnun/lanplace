@@ -1,6 +1,11 @@
 import { AppleTheme } from '../../../../shared/theme/AppleTheme';
 import { AdvertHistory, AdvertSnapshot } from '../../../advert/domain/AdvertHistory';
 import { RssiSample } from '../../../advert/domain/RssiRingBuffer';
+import {
+  ScanFilter,
+  ScanFilterHolder,
+  scanFilterIsActive
+} from '../../../advert/domain/ScanFilter';
 
 const SPARKLINE_HEIGHT: number = 120;
 const SPARKLINE_REFRESH_MS: number = 500;
@@ -16,6 +21,10 @@ export struct AdvertTab {
   @State serviceUuids: string[] = [];
   @State manufacturerHex: string = '';
   @State serviceDataHex: string = '';
+  @State filterUuid: string = '';
+  @State filterManufacturerId: string = '';
+  @State filterConnectableOnly: boolean = false;
+  @State filterActive: boolean = false;
   @State samples: RssiSample[] = [];
   private settings: RenderingContextSettings = new RenderingContextSettings(true);
   private ctx: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
@@ -55,6 +64,7 @@ export struct AdvertTab {
   }
 
   private reload(): void {
+    this.reloadFilterSummary();
     this.samples = AdvertHistory.samples(this.deviceKey);
     const snap: AdvertSnapshot | null = AdvertHistory.snapshot(this.deviceKey);
     if (snap !== null) {
@@ -155,6 +165,16 @@ export struct AdvertTab {
     ctx.fill();
   }
 
+  private reloadFilterSummary(): void {
+    const filter: ScanFilter = ScanFilterHolder.current();
+    const uuid: string = filter.serviceUuid !== undefined ? filter.serviceUuid.trim() : '';
+    const mfg: string = filter.manufacturerId !== undefined ? filter.manufacturerId.trim() : '';
+    this.filterUuid = uuid;
+    this.filterManufacturerId = mfg;
+    this.filterConnectableOnly = filter.connectableOnly;
+    this.filterActive = scanFilterIsActive(filter);
+  }
+
   private hasAdvertFields(): boolean {
     return this.localName.length > 0
       || this.flagsText.length > 0
@@ -182,8 +202,40 @@ export struct AdvertTab {
   }
 
   @Builder
+  filterSummary() {
+    Column({ space: 6 }) {
+      Text($r('app.string.workbench_advert_filter'))
+        .fontSize(AppleTheme.FONT_CAPTION)
+        .fontColor(AppleTheme.INK_MUTED)
+        .width('100%')
+      if (!this.filterActive) {
+        Text($r('app.string.workbench_advert_filter_none'))
+          .fontSize(AppleTheme.FONT_BODY)
+          .fontColor(AppleTheme.INK)
+          .width('100%')
+      } else {
+        if (this.filterUuid.length > 0) {
+          this.advertFieldRow($r('app.string.inventory_filter_uuid'), this.filterUuid)
+        }
+        if (this.filterManufacturerId.length > 0) {
+          this.advertFieldRow($r('app.string.inventory_filter_mfg'), this.filterManufacturerId)
+        }
+        if (this.filterConnectableOnly) {
+          Text($r('app.string.inventory_filter_connectable'))
+            .fontSize(AppleTheme.FONT_BODY)
+            .fontColor(AppleTheme.INK)
+            .width('100%')
+        }
+      }
+    }
+    .alignItems(HorizontalAlign.Start)
+    .width('100%')
+  }
+
+  @Builder
   advertFields() {
     Column({ space: 6 }) {
+      this.filterSummary()
       if (this.localName.length > 0) {
         this.advertFieldRow($r('app.string.workbench_advert_local_name'), this.localName)
       }

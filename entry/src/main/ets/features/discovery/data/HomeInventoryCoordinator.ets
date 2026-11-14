@@ -1,5 +1,11 @@
 import { common } from '@kit.AbilityKit';
 import { AdvertHistory } from '../../advert/domain/AdvertHistory';
+import {
+  matchesFilter,
+  ScanFilter,
+  ScanFilterHolder,
+  scanFilterTargetOf
+} from '../../advert/domain/ScanFilter';
 import { SCAN_TIMEOUT_MS } from '../../../shared/platform/Constants';
 import {
   HomeInventoryDevice,
@@ -33,8 +39,13 @@ export class HomeInventoryCoordinator {
 
   private static mergeDevices(): HomeInventoryDevice[] {
     const merged: HomeInventoryDevice[] = [];
+    const filter: ScanFilter = ScanFilterHolder.current();
     for (let i = 0; i < HomeInventoryCoordinator.bleDevices.length; i++) {
       const d = HomeInventoryCoordinator.bleDevices[i];
+      if (!matchesFilter(scanFilterTargetOf(d.connectable, d.advertServiceUuids, d.advertManufacturerHex),
+        filter)) {
+        continue;
+      }
       merged.push({
         deviceKey: bleInventoryKey(d.deviceId),
         kind: InventoryDeviceKind.Ble,

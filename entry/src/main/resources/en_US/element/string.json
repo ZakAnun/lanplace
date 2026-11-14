@@ -375,6 +375,38 @@
     {
       "name": "a11y_advert_rssi",
       "value": "RSSI history chart"
+    },
+    {
+      "name": "inventory_filter_uuid",
+      "value": "Service UUID"
+    },
+    {
+      "name": "inventory_filter_mfg",
+      "value": "Manufacturer ID"
+    },
+    {
+      "name": "inventory_filter_connectable",
+      "value": "Connectable only"
+    },
+    {
+      "name": "inventory_a11y_filter_uuid",
+      "value": "Filter nearby Bluetooth devices by service UUID"
+    },
+    {
+      "name": "inventory_a11y_filter_mfg",
+      "value": "Filter nearby Bluetooth devices by manufacturer ID"
+    },
+    {
+      "name": "inventory_a11y_filter_connectable",
+      "value": "Show connectable Bluetooth devices only"
+    },
+    {
+      "name": "workbench_advert_filter",
+      "value": "Scan filter"
+    },
+    {
+      "name": "workbench_advert_filter_none",
+      "value": "Off (showing all)"
     }
   ]
 }

@@ -13,6 +13,7 @@ import { HomeInventoryPanel } from '../features/discovery/presentation/HomeInven
 import { HomeInventoryDevice } from '../features/discovery/domain/HomeInventoryDevice';
 import { BleScanCoordinator } from '../features/discovery/data/BleScanCoordinator';
 import { HomeInventoryCoordinator } from '../features/discovery/data/HomeInventoryCoordinator';
+import { ScanFilter, ScanFilterHolder } from '../features/advert/domain/ScanFilter';
 
 enum InventoryUiPhase {
   Scanning,
@@ -26,6 +27,9 @@ struct HomeInventory {
   @State devices: HomeInventoryDevice[] = [];
   @State radarActive: boolean = true;
   @State wifiSsid: string = '';
+  @State filterUuid: string = '';
+  @State filterMfg: string = '';
+  @State filterConnectableOnly: boolean = false;
   @State pageAreaWidth: number = 0;
   @State pageAreaHeight: number = 0;
   @State pageLandscape: boolean = false;
@@ -54,6 +58,7 @@ struct HomeInventory {
     this.pageAlive = true;
     this.radarActive = true;
     ScanUiLabels.load(this.abilityContext());
+    this.restoreScanFilterFields();
     this.syncPageOrientation(this.pageAreaWidth, this.pageAreaHeight);
     this.refreshWifiSsid();
   }
@@ -74,6 +79,23 @@ struct HomeInventory {
   onPageShow(): void {
     this.radarActive = true;
     this.refreshWifiSsid();
+  }
+
+  private restoreScanFilterFields(): void {
+    const filter: ScanFilter = ScanFilterHolder.current();
+    this.filterUuid = filter.serviceUuid !== undefined ? filter.serviceUuid : '';
+    this.filterMfg = filter.manufacturerId !== undefined ? filter.manufacturerId : '';
+    this.filterConnectableOnly = filter.connectableOnly;
+  }
+
+  private applyScanFilter(): void {
+    const next: ScanFilter = {
+      serviceUuid: this.filterUuid,
+      manufacturerId: this.filterMfg,
+      connectableOnly: this.filterConnectableOnly
+    };
+    ScanFilterHolder.set(next);
+    this.devices = HomeInventoryCoordinator.snapshotDevices();
   }
 
   private async refreshWifiSsid(): Promise<void> {
@@ -276,6 +298,62 @@ struct HomeInventory {
   }
 
   @Builder
+  scanFilterBar() {
+    Column({ space: 6 }) {
+      Row({ space: 8 }) {
+        TextInput({ placeholder: $r('app.string.inventory_filter_uuid'), text: $filterUuid })
+          .layoutWeight(1)
+          .height(36)
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK)
+          .placeholderColor(AppleTheme.INK_MUTED)
+          .backgroundColor(AppleTheme.CANVAS)
+          .border({ width: 1, color: AppleTheme.HAIRLINE })
+          .borderRadius(AppleTheme.RADIUS_LG)
+          .padding({ left: 10, right: 10 })
+          .accessibilityText($r('app.string.inventory_a11y_filter_uuid'))
+          .onChange((value: string) => {
+            this.filterUuid = value;
+            this.applyScanFilter();
+          })
+        TextInput({ placeholder: $r('app.string.inventory_filter_mfg'), text: $filterMfg })
+          .layoutWeight(1)
+          .height(36)
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK)
+          .placeholderColor(AppleTheme.INK_MUTED)
+          .backgroundColor(AppleTheme.CANVAS)
+          .border({ width: 1, color: AppleTheme.HAIRLINE })
+          .borderRadius(AppleTheme.RADIUS_LG)
+          .padding({ left: 10, right: 10 })
+          .accessibilityText($r('app.string.inventory_a11y_filter_mfg'))
+          .onChange((value: string) => {
+            this.filterMfg = value;
+            this.applyScanFilter();
+          })
+      }
+      .width('100%')
+      Row({ space: 8 }) {
+        Toggle({ type: ToggleType.Switch, isOn: $filterConnectableOnly })
+          .selectedColor(AppleTheme.PRIMARY)
+          .accessibilityText($r('app.string.inventory_a11y_filter_connectable'))
+          .onChange((isOn: boolean) => {
+            this.filterConnectableOnly = isOn;
+            this.applyScanFilter();
+          })
+        Text($r('app.string.inventory_filter_connectable'))
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+          .layoutWeight(1)
+      }
+      .width('100%')
+      .height(AppleTheme.TOUCH_TARGET_VP)
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+  }
+
+  @Builder
   scanStopButton() {
     Button($r('app.string.btn_stop_scan'))
       .fontSize(AppleTheme.FONT_BODY)
@@ -343,6 +421,7 @@ struct HomeInventory {
   build() {
     Column({ space: 12 }) {
       this.pageHeader()
+      this.scanFilterBar()
       HomeInventoryPanel({
         devices: this.devices,
         active: this.radarActive,
