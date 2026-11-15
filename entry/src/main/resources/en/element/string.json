@@ -117,6 +117,10 @@
       "value": "LAN"
     },
     {
+      "name": "inventory_link_connected",
+      "value": "Connected"
+    },
+    {
       "name": "inventory_rssi_line",
       "value": "Signal %1$d dBm"
     },
@@ -134,7 +138,7 @@
     },
     {
       "name": "privacy_dialog_body",
-      "value": "When you use nearby device discovery, BlueScopes scans nearby Bluetooth devices on this device and LAN devices advertised via mDNS on your current Wi-Fi (such as name, IP, and port), and reads the current Wi-Fi name for display. Bluetooth permission is used to scan and display nearby Bluetooth devices. Network permission is used to discover LAN devices on the current Wi-Fi. Wi-Fi information permission is used to show the current network name. This works indoors, outdoors, and on any network. Data stays on this device and is not uploaded. Please read the privacy policy before continuing."
+      "value": "When you use nearby device discovery, BlueScopes scans nearby Bluetooth devices on this device and LAN devices advertised via mDNS on your current Wi-Fi (such as name, IP, and port), and reads the current Wi-Fi name for display. A GATT connection starts only when you tap connect, and a LAN port or HTTP probe runs only when you start it. Session logs stay in memory on this device and are given to the system share sheet only when you export them. Bluetooth permission is used to scan nearby Bluetooth devices and to connect when you ask. Network permission is used to discover LAN devices on the current Wi-Fi and to run probes you start. Wi-Fi information permission is used to show the current network name. This works indoors, outdoors, and on any network. Data stays on this device and is not uploaded. Please read the privacy policy before continuing."
     },
     {
       "name": "privacy_dialog_open_policy",
@@ -275,6 +279,254 @@
     {
       "name": "adv_broadcast_only",
       "value": "Broadcast only"
+    },
+    {
+      "name": "workbench_title",
+      "value": "Device workbench"
+    },
+    {
+      "name": "workbench_placeholder_body",
+      "value": "Workbench content appears here (Overview, Advert, GATT, Network, Log)."
+    },
+    {
+      "name": "workbench_tab_overview",
+      "value": "Overview"
+    },
+    {
+      "name": "workbench_tab_advert",
+      "value": "Advert"
+    },
+    {
+      "name": "workbench_tab_gatt",
+      "value": "GATT"
+    },
+    {
+      "name": "workbench_tab_lan",
+      "value": "Network"
+    },
+    {
+      "name": "workbench_tab_log",
+      "value": "Log"
+    },
+    {
+      "name": "workbench_btn_connect",
+      "value": "Connect"
+    },
+    {
+      "name": "workbench_btn_disconnect",
+      "value": "Disconnect"
+    },
+    {
+      "name": "workbench_btn_open_gatt",
+      "value": "Open GATT debug"
+    },
+    {
+      "name": "workbench_status_disconnected",
+      "value": "Not connected"
+    },
+    {
+      "name": "workbench_status_connected",
+      "value": "Connected"
+    },
+    {
+      "name": "workbench_status_lost",
+      "value": "Connection lost"
+    },
+    {
+      "name": "workbench_btn_reconnect",
+      "value": "Reconnect"
+    },
+    {
+      "name": "workbench_btn_export",
+      "value": "Export"
+    },
+    {
+      "name": "workbench_log_empty",
+      "value": "No session logs yet"
+    },
+    {
+      "name": "toast_export_failed",
+      "value": "Unable to export log"
+    },
+    {
+      "name": "a11y_export_log",
+      "value": "Export session log"
+    },
+    {
+      "name": "workbench_advert_empty",
+      "value": "No advertisement data yet"
+    },
+    {
+      "name": "workbench_advert_local_name",
+      "value": "Local name"
+    },
+    {
+      "name": "workbench_advert_flags",
+      "value": "Flags"
+    },
+    {
+      "name": "workbench_advert_tx_power",
+      "value": "TX power"
+    },
+    {
+      "name": "workbench_advert_uuid",
+      "value": "Service UUID"
+    },
+    {
+      "name": "workbench_advert_manufacturer",
+      "value": "Manufacturer data"
+    },
+    {
+      "name": "workbench_advert_service_data",
+      "value": "Service data"
+    },
+    {
+      "name": "workbench_advert_rssi",
+      "value": "RSSI"
+    },
+    {
+      "name": "a11y_advert_rssi",
+      "value": "RSSI history chart"
+    },
+    {
+      "name": "inventory_filter_title",
+      "value": "Filter"
+    },
+    {
+      "name": "inventory_filter_active_badge",
+      "value": "On"
+    },
+    {
+      "name": "inventory_a11y_filter_toggle",
+      "value": "Open or close scan filter"
+    },
+    {
+      "name": "inventory_a11y_filter_clear",
+      "value": "Clear all scan filters"
+    },
+    {
+      "name": "inventory_filter_uuid",
+      "value": "Service UUID"
+    },
+    {
+      "name": "inventory_filter_mfg",
+      "value": "Manufacturer ID"
+    },
+    {
+      "name": "inventory_filter_connectable",
+      "value": "Connectable only"
+    },
+    {
+      "name": "inventory_a11y_filter_uuid",
+      "value": "Filter nearby Bluetooth devices by service UUID"
+    },
+    {
+      "name": "inventory_a11y_filter_mfg",
+      "value": "Filter nearby Bluetooth devices by manufacturer ID"
+    },
+    {
+      "name": "inventory_a11y_filter_connectable",
+      "value": "Show connectable Bluetooth devices only"
+    },
+    {
+      "name": "inventory_a11y_open_workbench",
+      "value": "Open device workbench"
+    },
+    {
+      "name": "workbench_advert_filter",
+      "value": "Scan filter"
+    },
+    {
+      "name": "workbench_advert_filter_none",
+      "value": "Off (showing all)"
+    },
+    {
+      "name": "workbench_connected",
+      "value": "Connected"
+    },
+    {
+      "name": "workbench_status_connecting",
+      "value": "Connecting…"
+    },
+    {
+      "name": "toast_gatt_max_connections",
+      "value": "Connection limit reached. Disconnect another device first."
+    },
+    {
+      "name": "gatt_write_hex",
+      "value": "Write hex"
+    },
+    {
+      "name": "gatt_read",
+      "value": "Read"
+    },
+    {
+      "name": "gatt_notify",
+      "value": "Notify"
+    },
+    {
+      "name": "gatt_services_empty",
+      "value": "No services"
+    },
+    {
+      "name": "gatt_value_empty",
+      "value": "No value yet"
+    },
+    {
+      "name": "gatt_error_invalid_hex",
+      "value": "Invalid hex"
+    },
+    {
+      "name": "gatt_error_read",
+      "value": "Read failed"
+    },
+    {
+      "name": "gatt_error_write",
+      "value": "Write failed"
+    },
+    {
+      "name": "gatt_error_notify",
+      "value": "Notify failed"
+    },
+    {
+      "name": "workbench_lan_host",
+      "value": "Address"
+    },
+    {
+      "name": "workbench_lan_services",
+      "value": "Services / TXT"
+    },
+    {
+      "name": "workbench_lan_btn_tcp",
+      "value": "TCP probe"
+    },
+    {
+      "name": "workbench_lan_btn_http",
+      "value": "HTTP GET"
+    },
+    {
+      "name": "workbench_lan_probing",
+      "value": "Probing…"
+    },
+    {
+      "name": "workbench_lan_tcp_result",
+      "value": "TCP"
+    },
+    {
+      "name": "workbench_lan_http_result",
+      "value": "HTTP"
+    },
+    {
+      "name": "workbench_lan_empty_target",
+      "value": "Missing host or port"
+    },
+    {
+      "name": "a11y_lan_tcp_probe",
+      "value": "Probe TCP port"
+    },
+    {
+      "name": "a11y_lan_http_probe",
+      "value": "Probe with HTTP GET"
     }
   ]
 }

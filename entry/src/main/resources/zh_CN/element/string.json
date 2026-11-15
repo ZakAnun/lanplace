@@ -117,6 +117,10 @@
       "value": "局域网"
     },
     {
+      "name": "inventory_link_connected",
+      "value": "已连接"
+    },
+    {
       "name": "inventory_rssi_line",
       "value": "信号强度 %1$d dBm"
     },
@@ -134,7 +138,7 @@
     },
     {
       "name": "privacy_dialog_body",
-      "value": "蓝域（BlueScopes）会在您使用附近设备发现时，在本机扫描并展示周围蓝牙设备，以及您当前所连 Wi‑Fi 下通过 mDNS 主动宣告的局域网设备（如名称、IP、端口）；并读取当前 Wi‑Fi 名称以便展示。蓝牙权限用于扫描并展示周围蓝牙设备；网络权限用于发现当前 Wi‑Fi 下的局域网设备；Wi‑Fi 信息权限用于显示当前网络名称。适用于室内、室外及任意网络环境，数据仅在本机显示、不上传。请阅读隐私政策后选择是否继续。"
+      "value": "蓝域（BlueScopes）会在您使用附近设备发现时，在本机扫描并展示周围蓝牙设备，以及您当前所连 Wi‑Fi 下通过 mDNS 主动宣告的局域网设备（如名称、IP、端口），并读取当前 Wi‑Fi 名称以便展示。仅当您主动点击连接时，本应用才会与所选蓝牙设备建立 GATT 连接；仅当您主动发起时，才会对该局域网设备做端口或 HTTP 探测。会话日志只保存在本机内存中，只有您主动导出时才会把日志文本交给系统分享。蓝牙权限用于扫描并在您主动操作时连接周围蓝牙设备；网络权限用于发现当前 Wi‑Fi 下的局域网设备以及您主动发起的探测；Wi‑Fi 信息权限用于显示当前网络名称。适用于室内、室外及任意网络环境，数据仅在本机显示、不上传。请阅读隐私政策后选择是否继续。"
     },
     {
       "name": "privacy_dialog_open_policy",
@@ -275,6 +279,254 @@
     {
       "name": "adv_broadcast_only",
       "value": "仅广播"
+    },
+    {
+      "name": "workbench_title",
+      "value": "设备工作台"
+    },
+    {
+      "name": "workbench_placeholder_body",
+      "value": "工作台内容将在此展示（概览 / 广播 / GATT / 网络 / 日志）。"
+    },
+    {
+      "name": "workbench_tab_overview",
+      "value": "概览"
+    },
+    {
+      "name": "workbench_tab_advert",
+      "value": "广播"
+    },
+    {
+      "name": "workbench_tab_gatt",
+      "value": "GATT"
+    },
+    {
+      "name": "workbench_tab_lan",
+      "value": "网络"
+    },
+    {
+      "name": "workbench_tab_log",
+      "value": "日志"
+    },
+    {
+      "name": "workbench_btn_connect",
+      "value": "连接"
+    },
+    {
+      "name": "workbench_btn_disconnect",
+      "value": "断开"
+    },
+    {
+      "name": "workbench_btn_open_gatt",
+      "value": "打开 GATT 调试"
+    },
+    {
+      "name": "workbench_status_disconnected",
+      "value": "未连接"
+    },
+    {
+      "name": "workbench_status_connected",
+      "value": "已连接"
+    },
+    {
+      "name": "workbench_status_lost",
+      "value": "连接已丢失"
+    },
+    {
+      "name": "workbench_btn_reconnect",
+      "value": "重新连接"
+    },
+    {
+      "name": "workbench_btn_export",
+      "value": "导出"
+    },
+    {
+      "name": "workbench_log_empty",
+      "value": "暂无会话日志"
+    },
+    {
+      "name": "toast_export_failed",
+      "value": "无法导出日志"
+    },
+    {
+      "name": "a11y_export_log",
+      "value": "导出日志"
+    },
+    {
+      "name": "workbench_advert_empty",
+      "value": "暂无广播记录"
+    },
+    {
+      "name": "workbench_advert_local_name",
+      "value": "本地名称"
+    },
+    {
+      "name": "workbench_advert_flags",
+      "value": "Flags"
+    },
+    {
+      "name": "workbench_advert_tx_power",
+      "value": "发射功率"
+    },
+    {
+      "name": "workbench_advert_uuid",
+      "value": "服务 UUID"
+    },
+    {
+      "name": "workbench_advert_manufacturer",
+      "value": "厂商数据"
+    },
+    {
+      "name": "workbench_advert_service_data",
+      "value": "服务数据"
+    },
+    {
+      "name": "workbench_advert_rssi",
+      "value": "RSSI"
+    },
+    {
+      "name": "a11y_advert_rssi",
+      "value": "RSSI 历史曲线"
+    },
+    {
+      "name": "inventory_filter_title",
+      "value": "筛选"
+    },
+    {
+      "name": "inventory_filter_active_badge",
+      "value": "已筛选"
+    },
+    {
+      "name": "inventory_a11y_filter_toggle",
+      "value": "打开或关闭扫描筛选"
+    },
+    {
+      "name": "inventory_a11y_filter_clear",
+      "value": "清空全部筛选条件"
+    },
+    {
+      "name": "inventory_filter_uuid",
+      "value": "服务 UUID"
+    },
+    {
+      "name": "inventory_filter_mfg",
+      "value": "厂商 ID"
+    },
+    {
+      "name": "inventory_filter_connectable",
+      "value": "仅可连接"
+    },
+    {
+      "name": "inventory_a11y_filter_uuid",
+      "value": "按服务 UUID 过滤附近蓝牙设备"
+    },
+    {
+      "name": "inventory_a11y_filter_mfg",
+      "value": "按厂商 ID 过滤附近蓝牙设备"
+    },
+    {
+      "name": "inventory_a11y_filter_connectable",
+      "value": "仅显示可连接的蓝牙设备"
+    },
+    {
+      "name": "inventory_a11y_open_workbench",
+      "value": "打开设备工作台"
+    },
+    {
+      "name": "workbench_advert_filter",
+      "value": "扫描过滤"
+    },
+    {
+      "name": "workbench_advert_filter_none",
+      "value": "未启用（显示全部）"
+    },
+    {
+      "name": "workbench_connected",
+      "value": "已连接"
+    },
+    {
+      "name": "workbench_status_connecting",
+      "value": "连接中…"
+    },
+    {
+      "name": "toast_gatt_max_connections",
+      "value": "已达本机连接上限，请先断开其他设备"
+    },
+    {
+      "name": "gatt_write_hex",
+      "value": "写入 Hex"
+    },
+    {
+      "name": "gatt_read",
+      "value": "读取"
+    },
+    {
+      "name": "gatt_notify",
+      "value": "订阅通知"
+    },
+    {
+      "name": "gatt_services_empty",
+      "value": "未发现服务"
+    },
+    {
+      "name": "gatt_value_empty",
+      "value": "尚无数据"
+    },
+    {
+      "name": "gatt_error_invalid_hex",
+      "value": "Hex 格式无效"
+    },
+    {
+      "name": "gatt_error_read",
+      "value": "读取失败"
+    },
+    {
+      "name": "gatt_error_write",
+      "value": "写入失败"
+    },
+    {
+      "name": "gatt_error_notify",
+      "value": "订阅失败"
+    },
+    {
+      "name": "workbench_lan_host",
+      "value": "地址"
+    },
+    {
+      "name": "workbench_lan_services",
+      "value": "服务 / TXT"
+    },
+    {
+      "name": "workbench_lan_btn_tcp",
+      "value": "TCP 探测"
+    },
+    {
+      "name": "workbench_lan_btn_http",
+      "value": "HTTP GET"
+    },
+    {
+      "name": "workbench_lan_probing",
+      "value": "探测中…"
+    },
+    {
+      "name": "workbench_lan_tcp_result",
+      "value": "TCP"
+    },
+    {
+      "name": "workbench_lan_http_result",
+      "value": "HTTP"
+    },
+    {
+      "name": "workbench_lan_empty_target",
+      "value": "缺少主机或端口"
+    },
+    {
+      "name": "a11y_lan_tcp_probe",
+      "value": "TCP 端口探测"
+    },
+    {
+      "name": "a11y_lan_http_probe",
+      "value": "HTTP GET 探测"
     }
   ]
 }

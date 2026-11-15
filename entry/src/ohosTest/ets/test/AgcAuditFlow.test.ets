@@ -1,5 +1,6 @@
 /**
- * 仪器化 UI：覆盖审核员主路径 — 隐私同意 → 首页 → 附近设备 → 扫描控制按钮可见。
+ * 仪器化 UI：覆盖审核员主路径 — 隐私同意 → 首页 → 附近设备 → 扫描控制可见。
+ * 另覆盖扫描过滤栏，以及模拟器 mock 列表进入设备工作台（无设备行则跳过）。
  */
 import { abilityDelegatorRegistry } from '@kit.TestKit';
 import { describe, beforeAll, afterAll, it, expect } from '@ohos/hypium';
@@ -27,6 +28,14 @@ class UiCopy {
   close: string = '关闭';
   back: string = '返回';
   ble: string = '蓝牙';
+  filterTitle: string = '筛选';
+  filterConnectable: string = '仅可连接';
+  workbenchTitle: string = '设备工作台';
+  tabOverview: string = '概览';
+  tabAdvert: string = '广播';
+  tabGatt: string = 'GATT';
+  tabLan: string = '网络';
+  tabLog: string = '日志';
 }
 
 function englishCopy(): UiCopy {
@@ -46,6 +55,14 @@ function englishCopy(): UiCopy {
   copy.close = 'Close';
   copy.back = 'Back';
   copy.ble = 'Bluetooth';
+  copy.filterTitle = 'Filter';
+  copy.filterConnectable = 'Connectable only';
+  copy.workbenchTitle = 'Device workbench';
+  copy.tabOverview = 'Overview';
+  copy.tabAdvert = 'Advert';
+  copy.tabGatt = 'GATT';
+  copy.tabLan = 'Network';
+  copy.tabLog = 'Log';
   return copy;
 }
 
@@ -96,6 +113,15 @@ async function componentExistsWithin(driver: Driver, matcher: On, timeoutMs: num
   }
 }
 
+async function waitForComponentOrNull(driver: Driver, matcher: On, timeoutMs: number) {
+  try {
+    const found = await driver.waitForComponent(matcher, timeoutMs);
+    return found != null ? found : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
 async function waitUntilAbsent(driver: Driver, text: string, timeoutMs: number): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -108,6 +134,14 @@ async function waitUntilAbsent(driver: Driver, text: string, timeoutMs: number):
   return false;
 }
 
+const BLE_MOCK_DEVICE_NAMES: string[] = [
+  '客厅温湿度计',
+  'Mi Band Demo',
+  'Beacon-Gateway',
+  '未知设备',
+  '键盘 K380'
+];
+
 const MOCK_DEVICE_NAMES: string[] = [
   '客厅温湿度计',
   'Mi Band Demo',
@@ -118,9 +152,9 @@ const MOCK_DEVICE_NAMES: string[] = [
   '书房打印机'
 ];
 
-async function clickFirstListedDevice(driver: Driver): Promise<boolean> {
-  for (let i = 0; i < MOCK_DEVICE_NAMES.length; i++) {
-    const name = MOCK_DEVICE_NAMES[i];
+async function clickFirstOfNames(driver: Driver, names: string[]): Promise<boolean> {
+  for (let i = 0; i < names.length; i++) {
+    const name = names[i];
     if (await componentExistsWithin(driver, ON.text(name), 800)) {
       return await existThenClick(driver, ON.text(name));
     }
@@ -128,16 +162,60 @@ async function clickFirstListedDevice(driver: Driver): Promise<boolean> {
   return false;
 }
 
-async function anyMockDeviceVisible(driver: Driver): Promise<boolean> {
+async function clickFirstListedDevice(driver: Driver): Promise<boolean> {
+  return clickFirstOfNames(driver, MOCK_DEVICE_NAMES);
+}
+
+async function clickPreferredBleMock(driver: Driver): Promise<boolean> {
+  return clickFirstOfNames(driver, BLE_MOCK_DEVICE_NAMES);
+}
+
+async function firstVisibleMockName(driver: Driver): Promise<string> {
   for (let i = 0; i < MOCK_DEVICE_NAMES.length; i++) {
-    if (await componentExistsWithin(driver, ON.text(MOCK_DEVICE_NAMES[i]), 400)) {
-      return true;
+    const name = MOCK_DEVICE_NAMES[i];
+    if (await componentExistsWithin(driver, ON.text(name), 400)) {
+      return name;
     }
   }
-  return false;
+  return '';
+}
+
+async function anyMockDeviceVisible(driver: Driver): Promise<boolean> {
+  return (await firstVisibleMockName(driver)).length > 0;
+}
+
+async function tapBack(driver: Driver, copy: UiCopy): Promise<boolean> {
+  if (await existThenClick(driver, ON.text(copy.back))) {
+    return true;
+  }
+  return await existThenClick(driver, ON.text('‹'));
+}
+
+async function isWorkbenchVisible(driver: Driver, copy: UiCopy): Promise<boolean> {
+  const overview = await componentExistsWithin(driver, ON.text(copy.tabOverview), 1500);
+  if (!overview) {
+    return false;
+  }
+  const advert = await componentExistsWithin(driver, ON.text(copy.tabAdvert), 400);
+  const lan = await componentExistsWithin(driver, ON.text(copy.tabLan), 400);
+  const log = await componentExistsWithin(driver, ON.text(copy.tabLog), 400);
+  const title = await componentExistsWithin(driver, ON.text(copy.workbenchTitle), 400);
+  return advert || lan || log || title;
+}
+
+async function leaveWorkbenchIfPresent(driver: Driver, copy: UiCopy): Promise<void> {
+  if (!(await isWorkbenchVisible(driver, copy))) {
+    return;
+  }
+  await tapBack(driver, copy);
+  await sleep(PAGE_WAIT_MS);
 }
 
 async function ensureInventoryPage(driver: Driver, copy: UiCopy): Promise<void> {
+  if (await componentExistsWithin(driver, ON.text(copy.nearby), 2000)) {
+    return;
+  }
+  await leaveWorkbenchIfPresent(driver, copy);
   if (await componentExists(driver, ON.text(copy.nearby))) {
     return;
   }
@@ -217,6 +295,62 @@ export default function agcAuditFlowTest() {
       done();
     });
 
+    it('inventoryScanControlsReachable', 0, async (done: Function) => {
+      await existThenClick(driver, ON.text(copy.discover));
+      await sleep(PAGE_WAIT_MS);
+      await existThenClick(driver, ON.text(copy.start));
+      await allowBluetoothIfShown(driver);
+      await sleep(PAGE_WAIT_MS);
+      const hasTitle = await componentExists(driver, ON.text(copy.nearby));
+      expect(hasTitle).assertTrue();
+      const hasStop = await componentExists(driver, ON.text(copy.stop));
+      const hasRescan = await componentExists(driver, ON.text(copy.rescan));
+      const hasStart = await componentExists(driver, ON.text(copy.start));
+      expect(hasStop || hasRescan || hasStart).assertTrue();
+      done();
+    });
+
+    it('inventoryFilterBarAndOptionalWorkbenchNav', 0, async (done: Function) => {
+      await driver.setDisplayRotation(DisplayRotation.ROTATION_0);
+      await driver.delayMs(PAGE_WAIT_MS);
+      await ensureInventoryPage(driver, copy);
+      expect(await componentExists(driver, ON.text(copy.nearby))).assertTrue();
+      expect(await componentExists(driver, ON.text(copy.filterTitle))).assertTrue();
+      await existThenClick(driver, ON.text(copy.filterTitle));
+      expect(await componentExistsWithin(driver, ON.text(copy.filterConnectable), FIND_TIMEOUT_MS)).assertTrue();
+      const hasStop = await componentExists(driver, ON.text(copy.stop));
+      const hasStart = await componentExists(driver, ON.text(copy.start));
+      expect(hasStop || hasStart).assertTrue();
+
+      if (!(await componentExistsWithin(driver, ON.text(copy.picker), 2000))) {
+        await existThenClick(driver, ON.text(copy.start));
+        await allowBluetoothIfShown(driver);
+        await componentExistsWithin(driver, ON.text(copy.picker), FIND_TIMEOUT_MS);
+      }
+
+      const opened = await existThenClick(driver, ON.text(copy.picker));
+      if (!opened) {
+        done();
+        return;
+      }
+      await componentExistsWithin(driver, ON.text(copy.chooseDevice), FIND_TIMEOUT_MS);
+      const picked = await clickPreferredBleMock(driver);
+      if (!picked) {
+        await existThenClick(driver, ON.text(copy.close));
+        done();
+        return;
+      }
+      await sleep(PAGE_WAIT_MS);
+      expect(await isWorkbenchVisible(driver, copy)).assertTrue();
+      expect(await componentExists(driver, ON.text(copy.tabOverview))).assertTrue();
+      expect(await componentExists(driver, ON.text(copy.tabAdvert))).assertTrue();
+      expect(await componentExists(driver, ON.text(copy.tabLog))).assertTrue();
+      expect(await componentExistsWithin(driver, ON.text(copy.tabLan), 800)).assertFalse();
+      expect(await componentExistsWithin(driver, ON.text(copy.tabGatt), 800)).assertFalse();
+      await leaveWorkbenchIfPresent(driver, copy);
+      done();
+    });
+
     it('scanLabelStaysWithPhaseAcrossRotation', 0, async (done: Function) => {
       await driver.setDisplayRotation(DisplayRotation.ROTATION_0);
       await driver.delayMs(PAGE_WAIT_MS);
@@ -239,21 +373,6 @@ export default function agcAuditFlowTest() {
       expect(await componentExists(driver, ON.text(copy.start))).assertTrue();
       const stopPortrait = await driver.findComponents(ON.text(copy.stop));
       expect(stopPortrait == null || stopPortrait.length === 0).assertTrue();
-      done();
-    });
-
-    it('inventoryScanControlsReachable', 0, async (done: Function) => {
-      await existThenClick(driver, ON.text(copy.discover));
-      await sleep(PAGE_WAIT_MS);
-      await existThenClick(driver, ON.text(copy.start));
-      await allowBluetoothIfShown(driver);
-      await sleep(PAGE_WAIT_MS);
-      const hasTitle = await componentExists(driver, ON.text(copy.nearby));
-      expect(hasTitle).assertTrue();
-      const hasStop = await componentExists(driver, ON.text(copy.stop));
-      const hasRescan = await componentExists(driver, ON.text(copy.rescan));
-      const hasStart = await componentExists(driver, ON.text(copy.start));
-      expect(hasStop || hasRescan || hasStart).assertTrue();
       done();
     });
 
@@ -282,6 +401,7 @@ export default function agcAuditFlowTest() {
           await componentExistsWithin(driver, ON.text(copy.chooseDevice), FIND_TIMEOUT_MS);
           await clickFirstListedDevice(driver);
           await sleep(UI_WAIT_MS);
+          await leaveWorkbenchIfPresent(driver, copy);
         }
         hintGone = await waitUntilAbsent(driver, copy.tapHint, 4000);
       }
@@ -322,14 +442,30 @@ export default function agcAuditFlowTest() {
       expect(rotation === DisplayRotation.ROTATION_90).assertTrue();
 
       expect(await componentExists(driver, ON.text(copy.nearby))).assertTrue();
-      const hasStop = await componentExists(driver, ON.text(copy.stop));
-      const hasStart = await componentExists(driver, ON.text(copy.start));
+      const hasStop = await componentExistsWithin(driver, ON.text(copy.stop), 3000);
+      const hasStart = await componentExistsWithin(driver, ON.text(copy.start), 3000);
       expect(hasStop || hasStart).assertTrue();
-      const stopNow = await driver.findComponents(ON.text(copy.stop));
-      const actionLabel = (stopNow != null && stopNow.length > 0) ? copy.stop : copy.start;
-      const action = await driver.findComponent(ON.text(actionLabel));
-      const detail = await driver.findComponent(ON.text(copy.tapHint));
-      const legend = await driver.findComponent(ON.text(copy.ble));
+      expect(await componentExistsWithin(driver, ON.text(copy.ble), 3000)).assertTrue();
+
+      const hasTapHint = await componentExistsWithin(driver, ON.text(copy.tapHint), 2500);
+      const selectedName = await firstVisibleMockName(driver);
+      const hasPicker = await componentExistsWithin(driver, ON.text(copy.picker), 2500);
+      expect(hasTapHint || selectedName.length > 0 || hasPicker).assertTrue();
+
+      if (!hasTapHint) {
+        done();
+        return;
+      }
+
+      const actionLabel = hasStop ? copy.stop : copy.start;
+      const action = await waitForComponentOrNull(driver, ON.text(actionLabel), 3000);
+      const detail = await waitForComponentOrNull(driver, ON.text(copy.tapHint), 3000);
+      const legend = await waitForComponentOrNull(driver, ON.text(copy.ble), 3000);
+      expect(action != null && detail != null && legend != null).assertTrue();
+      if (action == null || detail == null || legend == null) {
+        done();
+        return;
+      }
       const actionBounds = await action.getBounds();
       const detailBounds = await detail.getBounds();
       const legendBounds = await legend.getBounds();

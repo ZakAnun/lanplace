@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@ohos/hypium';
-import { isSimulatorProductHint } from '../main/ets/common/DeviceEnvironment';
+import { isSimulatorProductHint } from '../main/ets/shared/platform/DeviceEnvironment';
 
 export default function deviceEnvironmentTest() {
   describe('DeviceEnvironment', () => {

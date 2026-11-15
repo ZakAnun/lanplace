@@ -11,6 +11,21 @@ import inventoryDeviceMergeTest from './InventoryDeviceMerge.test';
 import permissionPurposeTest from './PermissionPurpose.test';
 import scanUiLabelsTest from './ScanUiLabels.test';
 import privacyDialogLayoutTest from './PrivacyDialogLayout.test';
+import workbenchTabPolicyTest from './WorkbenchTabPolicy.test';
+import workbenchShellStateTest from './WorkbenchShellState.test';
+import logEventBusTest from './LogEventBus.test';
+import rssiRingBufferTest from './RssiRingBuffer.test';
+import advertHistoryTest from './AdvertHistory.test';
+import scanFilterTest from './ScanFilter.test';
+import gattConnectionRegistryTest from './GattConnectionRegistry.test';
+import gattConnectTest from './GattConnect.test';
+import bytesHexTest from './BytesHex.test';
+import sigCharacteristicNamesTest from './SigCharacteristicNames.test';
+import gattWriteQueueTest from './GattWriteQueue.test';
+import gattReadWriteTest from './GattReadWrite.test';
+import mergeRegistryLinkStateTest from './mergeRegistryLinkState.test';
+import tcpProbeTest from './TcpProbe.test';
+import httpHeadProbeTest from './HttpHeadProbe.test';
 
 export default function testsuite() {
   localUnitTest();
@@ -26,4 +41,19 @@ export default function testsuite() {
   permissionPurposeTest();
   scanUiLabelsTest();
   privacyDialogLayoutTest();
+  workbenchTabPolicyTest();
+  workbenchShellStateTest();
+  logEventBusTest();
+  rssiRingBufferTest();
+  advertHistoryTest();
+  scanFilterTest();
+  gattConnectionRegistryTest();
+  gattConnectTest();
+  bytesHexTest();
+  sigCharacteristicNamesTest();
+  gattWriteQueueTest();
+  gattReadWriteTest();
+  mergeRegistryLinkStateTest();
+  tcpProbeTest();
+  httpHeadProbeTest();
 }

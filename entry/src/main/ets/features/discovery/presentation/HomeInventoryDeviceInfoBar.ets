@@ -1,0 +1,101 @@
+import { AppleTheme } from '../../../shared/theme/AppleTheme';
+import { DeviceLinkState } from '../../../shared/ble/ScannedDevice';
+import { ScanUiLabels } from '../../../shared/platform/ScanUiLabels';
+import {
+  HomeInventoryDevice,
+  InventoryDeviceKind
+} from '../domain/HomeInventoryDevice';
+
+@Component
+export struct HomeInventoryDeviceInfoBar {
+  @Prop device: HomeInventoryDevice = {
+    deviceKey: '',
+    kind: InventoryDeviceKind.Ble,
+    displayName: '',
+    detailLine: '',
+    extraLine: '',
+    rssi: 0,
+    linkState: DeviceLinkState.Discovered
+  };
+  /** 空状态左右内边距。默认 16vp；横屏右栏传 0，与通栏扫描按钮对齐。 */
+  @Prop emptyStateHorizontalPadding: number = 16;
+  onOpen: () => void = (): void => {
+  };
+
+  private kindLabel(): Resource {
+    if (this.device.kind === InventoryDeviceKind.Lan) {
+      return $r('app.string.inventory_legend_lan');
+    }
+    return $r('app.string.inventory_legend_ble');
+  }
+
+  build() {
+    if (this.device.deviceKey.length === 0) {
+      Column() {
+        Text($r('app.string.radar_tap_hint'))
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+          .textAlign(TextAlign.Center)
+          .width('100%')
+      }
+      .width('100%')
+      .padding({
+        top: 16,
+        bottom: 16,
+        left: this.emptyStateHorizontalPadding,
+        right: this.emptyStateHorizontalPadding
+      })
+    } else {
+      Column({ space: 8 }) {
+        Row({ space: 8 }) {
+          Text(this.device.displayName)
+            .fontSize(AppleTheme.FONT_BODY)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(AppleTheme.INK)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .layoutWeight(1)
+          Text(this.kindLabel())
+            .fontSize(AppleTheme.FONT_CAPTION)
+            .fontColor(this.device.kind === InventoryDeviceKind.Lan ? AppleTheme.LAN_TEXT : AppleTheme.PRIMARY)
+          if (this.device.linkState === DeviceLinkState.Connected) {
+            Text(ScanUiLabels.inventoryLinkConnected)
+              .fontSize(AppleTheme.FONT_CAPTION)
+              .fontColor(AppleTheme.PRIMARY)
+          }
+        }
+        .width('100%')
+        Text(this.device.detailLine)
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+        if (this.device.extraLine.length > 0) {
+          Text(this.device.extraLine)
+            .fontSize(AppleTheme.FONT_CAPTION)
+            .fontColor(AppleTheme.INK_MUTED)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .width('100%')
+        }
+        if (this.device.kind === InventoryDeviceKind.Ble && this.device.rssi !== 0) {
+          Text($r('app.string.inventory_rssi_line', this.device.rssi))
+            .fontSize(AppleTheme.FONT_CAPTION)
+            .fontColor(AppleTheme.INK_MUTED)
+            .width('100%')
+        }
+      }
+      .width('100%')
+      .constraintSize({ minHeight: AppleTheme.TOUCH_TARGET_VP })
+      .padding(16)
+      .backgroundColor(AppleTheme.CANVAS)
+      .borderRadius(AppleTheme.RADIUS_LG)
+      .border({ width: 1, color: AppleTheme.HAIRLINE })
+      .accessibilityText($r('app.string.inventory_a11y_open_workbench'))
+      .onClick(() => {
+        this.onOpen();
+      })
+    }
+  }
+}

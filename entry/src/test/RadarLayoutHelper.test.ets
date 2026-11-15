@@ -5,7 +5,7 @@ import {
   isLandscapeLayout,
   LANDSCAPE_RIGHT_RAIL_WIDTH,
   radarZoneWidth
-} from '../main/ets/common/RadarLayoutHelper';
+} from '../main/ets/shared/layout/RadarLayoutHelper';
 
 export default function radarLayoutHelperTest() {
   describe('RadarLayoutHelper', () => {

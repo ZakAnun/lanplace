@@ -1,18 +1,24 @@
 import { common } from '@kit.AbilityKit';
-import { PromptAction, router } from '@kit.ArkUI';
-import { AppleTheme } from '../common/AppleTheme';
-import { BluetoothHelper } from '../common/BluetoothHelper';
-import { PermissionHelper } from '../common/PermissionHelper';
-import { nextBluetoothPermissionStep } from '../common/PermissionPurpose';
-import { ScanUiLabels } from '../common/ScanUiLabels';
-import { PrivacyConsentHelper } from '../common/PrivacyConsentHelper';
-import { WifiNetworkHelper } from '../common/WifiNetworkHelper';
-import { isLandscapeLayout } from '../common/RadarLayoutHelper';
-import { WindowLayoutStore } from '../common/WindowLayoutStore';
-import { HomeInventoryPanel } from '../components/HomeInventoryPanel';
-import { HomeInventoryDevice } from '../model/HomeInventoryDevice';
-import { BleScanCoordinator } from '../service/BleScanCoordinator';
-import { HomeInventoryCoordinator } from '../service/HomeInventoryCoordinator';
+import { PromptAction } from '@kit.ArkUI';
+import { AppleTheme } from '../shared/theme/AppleTheme';
+import { BluetoothHelper } from '../shared/platform/BluetoothHelper';
+import { PermissionHelper } from '../shared/platform/PermissionHelper';
+import { nextBluetoothPermissionStep } from '../shared/platform/PermissionPurpose';
+import { ScanUiLabels } from '../shared/platform/ScanUiLabels';
+import { PrivacyConsentHelper } from '../shared/platform/PrivacyConsentHelper';
+import { WifiNetworkHelper } from '../shared/platform/WifiNetworkHelper';
+import { isLandscapeLayout } from '../shared/layout/RadarLayoutHelper';
+import { WindowLayoutStore } from '../shared/layout/WindowLayoutStore';
+import { HomeInventoryPanel } from '../features/discovery/presentation/HomeInventoryPanel';
+import { HomeInventoryDevice } from '../features/discovery/domain/HomeInventoryDevice';
+import { BleScanCoordinator } from '../features/discovery/data/BleScanCoordinator';
+import { HomeInventoryCoordinator } from '../features/discovery/data/HomeInventoryCoordinator';
+import {
+  defaultScanFilter,
+  ScanFilter,
+  ScanFilterHolder,
+  scanFilterIsActive
+} from '../features/advert/domain/ScanFilter';
 
 enum InventoryUiPhase {
   Scanning,
@@ -26,6 +32,10 @@ struct HomeInventory {
   @State devices: HomeInventoryDevice[] = [];
   @State radarActive: boolean = true;
   @State wifiSsid: string = '';
+  @State filterUuid: string = '';
+  @State filterMfg: string = '';
+  @State filterConnectableOnly: boolean = false;
+  @State scanFilterPopupVisible: boolean = false;
   @State pageAreaWidth: number = 0;
   @State pageAreaHeight: number = 0;
   @State pageLandscape: boolean = false;
@@ -54,6 +64,7 @@ struct HomeInventory {
     this.pageAlive = true;
     this.radarActive = true;
     ScanUiLabels.load(this.abilityContext());
+    this.restoreScanFilterFields();
     this.syncPageOrientation(this.pageAreaWidth, this.pageAreaHeight);
     this.refreshWifiSsid();
   }
@@ -74,6 +85,52 @@ struct HomeInventory {
   onPageShow(): void {
     this.radarActive = true;
     this.refreshWifiSsid();
+    this.devices = HomeInventoryCoordinator.snapshotDevices();
+  }
+
+  private restoreScanFilterFields(): void {
+    const filter: ScanFilter = ScanFilterHolder.current();
+    this.filterUuid = filter.serviceUuid !== undefined ? filter.serviceUuid : '';
+    this.filterMfg = filter.manufacturerId !== undefined ? filter.manufacturerId : '';
+    this.filterConnectableOnly = filter.connectableOnly;
+  }
+
+  private applyScanFilter(): void {
+    const next: ScanFilter = {
+      serviceUuid: this.filterUuid,
+      manufacturerId: this.filterMfg,
+      connectableOnly: this.filterConnectableOnly
+    };
+    ScanFilterHolder.set(next);
+    this.devices = HomeInventoryCoordinator.snapshotDevices();
+  }
+
+  private currentScanFilter(): ScanFilter {
+    return {
+      serviceUuid: this.filterUuid,
+      manufacturerId: this.filterMfg,
+      connectableOnly: this.filterConnectableOnly
+    };
+  }
+
+  private scanFilterActive(): boolean {
+    return scanFilterIsActive(this.currentScanFilter());
+  }
+
+  private toggleScanFilterPopup(): void {
+    this.scanFilterPopupVisible = !this.scanFilterPopupVisible;
+  }
+
+  private onScanFilterPopupStateChange(isVisible: boolean): void {
+    this.scanFilterPopupVisible = isVisible;
+  }
+
+  private clearScanFilter(): void {
+    const reset: ScanFilter = defaultScanFilter();
+    this.filterUuid = reset.serviceUuid !== undefined ? reset.serviceUuid : '';
+    this.filterMfg = reset.manufacturerId !== undefined ? reset.manufacturerId : '';
+    this.filterConnectableOnly = reset.connectableOnly;
+    this.applyScanFilter();
   }
 
   private async refreshWifiSsid(): Promise<void> {
@@ -125,7 +182,7 @@ struct HomeInventory {
       }
       if (!accepted) {
         this.prompt().showToast({ message: $r('app.string.toast_privacy_required') });
-        router.back();
+        this.getUIContext().getRouter().back();
         return;
       }
 
@@ -222,6 +279,18 @@ struct HomeInventory {
     }
   }
 
+  private openDeviceWorkbench(deviceKey: string): void {
+    if (deviceKey.length === 0) {
+      return;
+    }
+    this.getUIContext().getRouter().pushUrl({
+      url: 'pages/DeviceWorkbench',
+      params: { deviceKey: deviceKey }
+    }).catch(() => {
+      this.prompt().showToast({ message: $r('app.string.toast_action_failed') });
+    });
+  }
+
   private syncPageOrientation(areaWidth: number, areaHeight: number): void {
     let width = areaWidth;
     let height = areaHeight;
@@ -246,7 +315,7 @@ struct HomeInventory {
       .border({ width: 1, color: AppleTheme.HAIRLINE })
       .accessibilityText($r('app.string.a11y_back'))
       .onClick(() => {
-        router.back();
+        this.getUIContext().getRouter().back();
       })
       Blank()
         .layoutWeight(1)
@@ -256,11 +325,132 @@ struct HomeInventory {
         .fontColor(AppleTheme.INK)
       Blank()
         .layoutWeight(1)
-      Blank()
-        .width(40)
+      Button({ type: ButtonType.Normal, stateEffect: true }) {
+        Row({ space: 6 }) {
+          Text($r('app.string.inventory_filter_title'))
+            .fontSize(AppleTheme.FONT_BODY)
+            .fontColor(this.scanFilterActive() ? AppleTheme.PRIMARY : AppleTheme.INK)
+          if (this.scanFilterActive()) {
+            Text('•')
+              .fontSize(18)
+              .fontColor(AppleTheme.PRIMARY)
+              .accessibilityText($r('app.string.inventory_filter_active_badge'))
+          }
+        }
+      }
+      .height(40)
+      .padding({ left: 12, right: 12 })
+      .backgroundColor(AppleTheme.CANVAS)
+      .border({ width: 1, color: this.scanFilterActive() ? AppleTheme.PRIMARY : AppleTheme.HAIRLINE })
+      .borderRadius(AppleTheme.RADIUS_PILL)
+      .accessibilityText($r('app.string.inventory_a11y_filter_toggle'))
+      .bindPopup(this.scanFilterPopupVisible, {
+        builder: this.scanFilterPopup,
+        placement: Placement.Bottom,
+        enableArrow: true,
+        showInSubWindow: true,
+        mask: { color: '#33000000' },
+        onStateChange: (event) => {
+          this.onScanFilterPopupStateChange(event.isVisible);
+        }
+      })
+      .onClick(() => {
+        this.toggleScanFilterPopup();
+      })
     }
     .width('100%')
     .padding({ bottom: 4 })
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  scanFilterPopup() {
+    Column({ space: 10 }) {
+      Row() {
+        Text($r('app.string.inventory_filter_title'))
+          .fontSize(AppleTheme.FONT_BODY)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppleTheme.INK)
+          .layoutWeight(1)
+        if (this.scanFilterActive()) {
+          Button({ type: ButtonType.Circle, stateEffect: true }) {
+            Row() {
+              SymbolGlyph($r('sys.symbol.eraser_line'))
+                .fontSize(18)
+                .fontWeight(FontWeight.Regular)
+                .fontColor([AppleTheme.INK_MUTED])
+                .accessibilityLevel('no')
+            }
+            .width('100%')
+            .height('100%')
+            .justifyContent(FlexAlign.Center)
+            .alignItems(VerticalAlign.Center)
+          }
+          .width(32)
+          .height(32)
+          .padding(0)
+          .backgroundColor(AppleTheme.CANVAS)
+          .border({ width: 1, color: AppleTheme.HAIRLINE })
+          .accessibilityText($r('app.string.inventory_a11y_filter_clear'))
+          .onClick(() => {
+            this.clearScanFilter();
+          })
+        }
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      TextInput({ placeholder: $r('app.string.inventory_filter_uuid'), text: this.filterUuid })
+        .width('100%')
+        .height(36)
+        .fontSize(AppleTheme.FONT_CAPTION)
+        .fontColor(AppleTheme.INK)
+        .placeholderColor(AppleTheme.INK_MUTED)
+        .backgroundColor(AppleTheme.CANVAS)
+        .border({ width: 1, color: AppleTheme.HAIRLINE })
+        .borderRadius(AppleTheme.RADIUS_LG)
+        .padding({ left: 10, right: 10 })
+        .accessibilityText($r('app.string.inventory_a11y_filter_uuid'))
+        .onChange((value: string) => {
+          this.filterUuid = value;
+          this.applyScanFilter();
+        })
+      TextInput({ placeholder: $r('app.string.inventory_filter_mfg'), text: this.filterMfg })
+        .width('100%')
+        .height(36)
+        .fontSize(AppleTheme.FONT_CAPTION)
+        .fontColor(AppleTheme.INK)
+        .placeholderColor(AppleTheme.INK_MUTED)
+        .backgroundColor(AppleTheme.CANVAS)
+        .border({ width: 1, color: AppleTheme.HAIRLINE })
+        .borderRadius(AppleTheme.RADIUS_LG)
+        .padding({ left: 10, right: 10 })
+        .accessibilityText($r('app.string.inventory_a11y_filter_mfg'))
+        .onChange((value: string) => {
+          this.filterMfg = value;
+          this.applyScanFilter();
+        })
+      Row({ space: 8 }) {
+        Toggle({ type: ToggleType.Switch, isOn: this.filterConnectableOnly })
+          .selectedColor(AppleTheme.PRIMARY)
+          .accessibilityText($r('app.string.inventory_a11y_filter_connectable'))
+          .onChange((isOn: boolean) => {
+            this.filterConnectableOnly = isOn;
+            this.applyScanFilter();
+          })
+        Text($r('app.string.inventory_filter_connectable'))
+          .fontSize(AppleTheme.FONT_CAPTION)
+          .fontColor(AppleTheme.INK_MUTED)
+          .layoutWeight(1)
+      }
+      .width('100%')
+      .height(AppleTheme.TOUCH_TARGET_VP)
+      .alignItems(VerticalAlign.Center)
+    }
+    .width(300)
+    .padding(14)
+    .backgroundColor(AppleTheme.CANVAS)
+    .borderRadius(AppleTheme.RADIUS_LG)
+    .border({ width: 1, color: AppleTheme.HAIRLINE })
   }
 
   @Builder
@@ -338,7 +528,10 @@ struct HomeInventory {
         isLandscapeLayout: this.pageLandscape,
         windowHeightVp: this.mainWindowHeightVp(),
         wifiSsid: this.wifiSsid,
-        landscapeScanAction: this.landscapeScanAction
+        landscapeScanAction: this.landscapeScanAction,
+        onOpenWorkbench: (deviceKey: string): void => {
+          this.openDeviceWorkbench(deviceKey);
+        }
       })
         .layoutWeight(1)
         .width('100%')

@@ -3,7 +3,7 @@ import {
   deviceSpherePointForIndex,
   deviceSpherePointForStableKey,
   goldenSpherePoint
-} from '../main/ets/common/RadarDeviceLayout';
+} from '../main/ets/shared/layout/RadarDeviceLayout';
 
 export default function radarDeviceLayoutTest() {
   describe('RadarDeviceLayout', () => {

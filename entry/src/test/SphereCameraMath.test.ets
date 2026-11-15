@@ -20,9 +20,9 @@ import {
   sphereFacing,
   worldToCanvas,
   PITCH_LIMIT_RAD
-} from '../main/ets/common/SphereCameraMath';
-import { deviceSpherePointForStableKey, Vec3 } from '../main/ets/common/RadarDeviceLayout';
-import { syntheticInventoryFeed } from '../main/ets/common/InventoryDeviceMerge';
+} from '../main/ets/shared/layout/SphereCameraMath';
+import { deviceSpherePointForStableKey, Vec3 } from '../main/ets/shared/layout/RadarDeviceLayout';
+import { syntheticInventoryFeed } from '../main/ets/features/discovery/domain/InventoryDeviceMerge';
 
 export default function sphereCameraMathTest() {
   describe('SphereCameraMath', () => {

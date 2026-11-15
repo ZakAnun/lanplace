@@ -1,13 +1,13 @@
 import { describe, it, expect } from '@ohos/hypium';
-import { deviceSpherePointForStableKey } from '../main/ets/common/RadarDeviceLayout';
+import { deviceSpherePointForStableKey } from '../main/ets/shared/layout/RadarDeviceLayout';
 import {
   bleInventoryKey,
   selectionKeyIfStillPresent,
   syntheticInventoryFeed,
   withRssiJitter,
   withoutDeviceKey
-} from '../main/ets/common/InventoryDeviceMerge';
-import { InventoryDeviceKind } from '../main/ets/model/HomeInventoryDevice';
+} from '../main/ets/features/discovery/domain/InventoryDeviceMerge';
+import { InventoryDeviceKind } from '../main/ets/features/discovery/domain/HomeInventoryDevice';
 
 export default function inventoryDeviceMergeTest() {
   describe('InventoryDeviceMerge', () => {

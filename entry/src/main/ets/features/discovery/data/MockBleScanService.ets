@@ -1,0 +1,220 @@
+import { ScanUiLabels } from '../../../shared/platform/ScanUiLabels';
+import { DeviceLinkState, ScannedDevice } from '../../../shared/ble/ScannedDevice';
+import { SCAN_TIMEOUT_MS } from '../../../shared/platform/Constants';
+import { BLE_SCAN_STOP_WITH_COMPLETE, BleScanStopOptions } from './BleScanStopOptions';
+
+type ScanCallback = (devices: ScannedDevice[]) => void;
+type ScanCompleteCallback = () => void;
+
+interface MockTemplate {
+  deviceId: string;
+  displayName: string;
+  rssi: number;
+  connectable: boolean;
+  advertSummary: string;
+  advertLocalName: string;
+  advertFlags?: number;
+  advertTxPower?: number;
+  advertServiceUuids: string[];
+  advertManufacturerHex: string;
+  advertServiceDataHex: string;
+}
+
+const MOCK_CATALOG: MockTemplate[] = [
+  {
+    deviceId: 'AA:BB:CC:01:02:03',
+    displayName: '客厅温湿度计',
+    rssi: -48,
+    connectable: true,
+    advertSummary: 'UUID 0000180a-0000-1000-8000-00805f9b34fb · TX -4 dBm',
+    advertLocalName: '客厅温湿度计',
+    advertTxPower: -4,
+    advertServiceUuids: ['0000180a-0000-1000-8000-00805f9b34fb'],
+    advertManufacturerHex: '',
+    advertServiceDataHex: ''
+  },
+  {
+    deviceId: 'AA:BB:CC:11:22:33',
+    displayName: 'Mi Band Demo',
+    rssi: -62,
+    connectable: true,
+    advertSummary: 'Flags 0x6 · Mfg 57:01:…',
+    advertLocalName: 'Mi Band Demo',
+    advertFlags: 0x6,
+    advertServiceUuids: [],
+    advertManufacturerHex: '57:01',
+    advertServiceDataHex: ''
+  },
+  {
+    deviceId: 'AA:BB:CC:44:55:66',
+    displayName: 'Beacon-Gateway',
+    rssi: -71,
+    connectable: false,
+    advertSummary: 'SvcData 09:ff:…',
+    advertLocalName: 'Beacon-Gateway',
+    advertServiceUuids: [],
+    advertManufacturerHex: '',
+    advertServiceDataHex: '09:ff'
+  },
+  {
+    deviceId: 'AA:BB:CC:77:88:99',
+    displayName: '未知设备',
+    rssi: -55,
+    connectable: true,
+    advertSummary: 'UUID 0000fff0-0000-1000-8000-00805f9b34fb',
+    advertLocalName: '',
+    advertServiceUuids: ['0000fff0-0000-1000-8000-00805f9b34fb'],
+    advertManufacturerHex: '',
+    advertServiceDataHex: ''
+  },
+  {
+    deviceId: 'AA:BB:CC:DE:AD:00',
+    displayName: '键盘 K380',
+    rssi: -58,
+    connectable: true,
+    advertSummary: 'Flags 0x4 · TX -8 dBm',
+    advertLocalName: '键盘 K380',
+    advertFlags: 0x4,
+    advertTxPower: -8,
+    advertServiceUuids: [],
+    advertManufacturerHex: '',
+    advertServiceDataHex: ''
+  }
+];
+
+export class MockBleScanService {
+  private static scanning: boolean = false;
+  private static deviceMap: Map<string, ScannedDevice> = new Map();
+  private static endTimerId: number = -1;
+  private static revealIntervalId: number = -1;
+  private static rssiIntervalId: number = -1;
+  private static onUpdate: ScanCallback = () => {};
+  private static onComplete: ScanCompleteCallback = () => {};
+  private static revealIndex: number = 0;
+
+  static isScanning(): boolean {
+    return MockBleScanService.scanning;
+  }
+
+  private static emitUpdate(): void {
+    const list = Array.from(MockBleScanService.deviceMap.values());
+    list.sort((a, b) => b.rssi - a.rssi);
+    MockBleScanService.onUpdate(list);
+  }
+
+  private static clearTimers(): void {
+    if (MockBleScanService.endTimerId >= 0) {
+      clearTimeout(MockBleScanService.endTimerId);
+      MockBleScanService.endTimerId = -1;
+    }
+    if (MockBleScanService.revealIntervalId >= 0) {
+      clearInterval(MockBleScanService.revealIntervalId);
+      MockBleScanService.revealIntervalId = -1;
+    }
+    if (MockBleScanService.rssiIntervalId >= 0) {
+      clearInterval(MockBleScanService.rssiIntervalId);
+      MockBleScanService.rssiIntervalId = -1;
+    }
+  }
+
+  private static toDevice(t: MockTemplate, rssi: number): ScannedDevice {
+    const connLabel = ScanUiLabels.connectableLabel(t.connectable);
+    return {
+      deviceId: t.deviceId,
+      displayName: t.displayName,
+      rssi,
+      connectable: t.connectable,
+      detailLine: `${t.deviceId} · ${rssi} dBm · ${connLabel}`,
+      advertSummary: t.advertSummary,
+      linkState: DeviceLinkState.Discovered,
+      advertLocalName: t.advertLocalName,
+      advertFlags: t.advertFlags,
+      advertTxPower: t.advertTxPower,
+      advertServiceUuids: t.advertServiceUuids.slice(),
+      advertManufacturerHex: t.advertManufacturerHex,
+      advertServiceDataHex: t.advertServiceDataHex
+    };
+  }
+
+  private static revealNextDevice(): void {
+    if (MockBleScanService.revealIndex >= MOCK_CATALOG.length) {
+      return;
+    }
+    const t = MOCK_CATALOG[MockBleScanService.revealIndex];
+    MockBleScanService.revealIndex++;
+    const dev = MockBleScanService.toDevice(t, t.rssi);
+    MockBleScanService.deviceMap.set(t.deviceId, dev);
+    MockBleScanService.emitUpdate();
+  }
+
+  static start(onUpdate: ScanCallback, onComplete?: ScanCompleteCallback): boolean {
+    if (MockBleScanService.scanning) {
+      return false;
+    }
+    MockBleScanService.onUpdate = onUpdate;
+    MockBleScanService.onComplete = onComplete ?? (() => {});
+    MockBleScanService.deviceMap.clear();
+    MockBleScanService.revealIndex = 0;
+    MockBleScanService.scanning = true;
+
+    MockBleScanService.revealNextDevice();
+    MockBleScanService.revealIntervalId = setInterval(() => {
+      MockBleScanService.revealNextDevice();
+    }, 900) as number;
+
+    MockBleScanService.rssiIntervalId = setInterval(() => {
+      MockBleScanService.deviceMap.forEach((d, id) => {
+        const jitter = Math.floor(Math.random() * 5) - 2;
+        const rssi = Math.min(-40, Math.max(-85, d.rssi + jitter));
+        const connLabel = ScanUiLabels.connectableLabel(d.connectable);
+        MockBleScanService.deviceMap.set(id, {
+          deviceId: d.deviceId,
+          displayName: d.displayName,
+          rssi,
+          connectable: d.connectable,
+          detailLine: `${d.deviceId} · ${rssi} dBm · ${connLabel}`,
+          advertSummary: d.advertSummary,
+          linkState: d.linkState,
+          advertLocalName: d.advertLocalName,
+          advertFlags: d.advertFlags,
+          advertTxPower: d.advertTxPower,
+          advertServiceUuids: d.advertServiceUuids.slice(),
+          advertManufacturerHex: d.advertManufacturerHex,
+          advertServiceDataHex: d.advertServiceDataHex
+        });
+      });
+      MockBleScanService.emitUpdate();
+    }, 1500) as number;
+
+    MockBleScanService.endTimerId = setTimeout(() => {
+      MockBleScanService.stop(BLE_SCAN_STOP_WITH_COMPLETE);
+    }, SCAN_TIMEOUT_MS) as number;
+
+    return true;
+  }
+
+  static stop(options?: BleScanStopOptions): void {
+    if (!MockBleScanService.scanning) {
+      return;
+    }
+    const emitUpdate = options?.emitUpdate !== false;
+    const notifyComplete = options?.notifyComplete !== false;
+
+    MockBleScanService.scanning = false;
+    MockBleScanService.clearTimers();
+
+    const updateCb = MockBleScanService.onUpdate;
+    const completeCb = MockBleScanService.onComplete;
+    MockBleScanService.onUpdate = () => {};
+    MockBleScanService.onComplete = () => {};
+
+    if (emitUpdate) {
+      const list = Array.from(MockBleScanService.deviceMap.values());
+      list.sort((a, b) => b.rssi - a.rssi);
+      updateCb(list);
+    }
+    if (notifyComplete) {
+      completeCb();
+    }
+  }
+}
