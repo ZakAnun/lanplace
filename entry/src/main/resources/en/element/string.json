@@ -389,6 +389,22 @@
       "value": "RSSI history chart"
     },
     {
+      "name": "inventory_filter_title",
+      "value": "Filter"
+    },
+    {
+      "name": "inventory_filter_active_badge",
+      "value": "On"
+    },
+    {
+      "name": "inventory_a11y_filter_toggle",
+      "value": "Open or close scan filter"
+    },
+    {
+      "name": "inventory_a11y_filter_clear",
+      "value": "Clear all scan filters"
+    },
+    {
       "name": "inventory_filter_uuid",
       "value": "Service UUID"
     },
@@ -411,6 +427,10 @@
     {
       "name": "inventory_a11y_filter_connectable",
       "value": "Show connectable Bluetooth devices only"
+    },
+    {
+      "name": "inventory_a11y_open_workbench",
+      "value": "Open device workbench"
     },
     {
       "name": "workbench_advert_filter",

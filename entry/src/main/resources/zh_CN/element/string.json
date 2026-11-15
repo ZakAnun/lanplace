@@ -389,6 +389,22 @@
       "value": "RSSI 历史曲线"
     },
     {
+      "name": "inventory_filter_title",
+      "value": "筛选"
+    },
+    {
+      "name": "inventory_filter_active_badge",
+      "value": "已筛选"
+    },
+    {
+      "name": "inventory_a11y_filter_toggle",
+      "value": "打开或关闭扫描筛选"
+    },
+    {
+      "name": "inventory_a11y_filter_clear",
+      "value": "清空全部筛选条件"
+    },
+    {
       "name": "inventory_filter_uuid",
       "value": "服务 UUID"
     },
@@ -411,6 +427,10 @@
     {
       "name": "inventory_a11y_filter_connectable",
       "value": "仅显示可连接的蓝牙设备"
+    },
+    {
+      "name": "inventory_a11y_open_workbench",
+      "value": "打开设备工作台"
     },
     {
       "name": "workbench_advert_filter",

@@ -19,6 +19,8 @@ export struct HomeInventoryDeviceInfoBar {
   };
   /** 空状态左右内边距。默认 16vp；横屏右栏传 0，与通栏扫描按钮对齐。 */
   @Prop emptyStateHorizontalPadding: number = 16;
+  onOpen: () => void = (): void => {
+  };
 
   private kindLabel(): Resource {
     if (this.device.kind === InventoryDeviceKind.Lan) {
@@ -85,10 +87,15 @@ export struct HomeInventoryDeviceInfoBar {
         }
       }
       .width('100%')
+      .constraintSize({ minHeight: AppleTheme.TOUCH_TARGET_VP })
       .padding(16)
       .backgroundColor(AppleTheme.CANVAS)
       .borderRadius(AppleTheme.RADIUS_LG)
       .border({ width: 1, color: AppleTheme.HAIRLINE })
+      .accessibilityText($r('app.string.inventory_a11y_open_workbench'))
+      .onClick(() => {
+        this.onOpen();
+      })
     }
   }
 }

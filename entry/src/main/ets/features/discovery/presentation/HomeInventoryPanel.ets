@@ -63,6 +63,13 @@ export struct HomeInventoryPanel {
     this.selectedDeviceKey = selectionKeyIfStillPresent(this.selectedDeviceKey, this.devices);
   }
 
+  private openSelectedWorkbench(): void {
+    if (this.selectedDeviceKey.length === 0) {
+      return;
+    }
+    this.onOpenWorkbench(this.selectedDeviceKey);
+  }
+
   private selectedDevice(): HomeInventoryDevice {
     for (let i = 0; i < this.devices.length; i++) {
       if (this.devices[i].deviceKey === this.selectedDeviceKey) {
@@ -289,7 +296,10 @@ export struct HomeInventoryPanel {
         Scroll() {
           HomeInventoryDeviceInfoBar({
             device: this.selectedDevice(),
-            emptyStateHorizontalPadding: 0
+            emptyStateHorizontalPadding: 0,
+            onOpen: (): void => {
+              this.openSelectedWorkbench();
+            }
           })
         }
         .width('100%')
@@ -343,7 +353,12 @@ export struct HomeInventoryPanel {
       .width('100%')
       .alignItems(HorizontalAlign.Center)
 
-      HomeInventoryDeviceInfoBar({ device: this.selectedDevice() })
+      HomeInventoryDeviceInfoBar({
+        device: this.selectedDevice(),
+        onOpen: (): void => {
+          this.openSelectedWorkbench();
+        }
+      })
     }
     .width('100%')
     .height('100%')
