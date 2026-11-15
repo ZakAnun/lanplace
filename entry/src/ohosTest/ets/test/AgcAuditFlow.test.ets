@@ -28,6 +28,7 @@ class UiCopy {
   close: string = '关闭';
   back: string = '返回';
   ble: string = '蓝牙';
+  filterTitle: string = '筛选';
   filterConnectable: string = '仅可连接';
   workbenchTitle: string = '设备工作台';
   tabOverview: string = '概览';
@@ -54,6 +55,7 @@ function englishCopy(): UiCopy {
   copy.close = 'Close';
   copy.back = 'Back';
   copy.ble = 'Bluetooth';
+  copy.filterTitle = 'Filter';
   copy.filterConnectable = 'Connectable only';
   copy.workbenchTitle = 'Device workbench';
   copy.tabOverview = 'Overview';
@@ -313,7 +315,9 @@ export default function agcAuditFlowTest() {
       await driver.delayMs(PAGE_WAIT_MS);
       await ensureInventoryPage(driver, copy);
       expect(await componentExists(driver, ON.text(copy.nearby))).assertTrue();
-      expect(await componentExists(driver, ON.text(copy.filterConnectable))).assertTrue();
+      expect(await componentExists(driver, ON.text(copy.filterTitle))).assertTrue();
+      await existThenClick(driver, ON.text(copy.filterTitle));
+      expect(await componentExistsWithin(driver, ON.text(copy.filterConnectable), FIND_TIMEOUT_MS)).assertTrue();
       const hasStop = await componentExists(driver, ON.text(copy.stop));
       const hasStart = await componentExists(driver, ON.text(copy.start));
       expect(hasStop || hasStart).assertTrue();
