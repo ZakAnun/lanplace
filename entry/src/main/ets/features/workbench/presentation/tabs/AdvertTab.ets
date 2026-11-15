@@ -94,13 +94,6 @@ export struct AdvertTab {
       return;
     }
 
-    ctx.strokeStyle = AppleTheme.HAIRLINE;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, h - 0.5);
-    ctx.lineTo(w, h - 0.5);
-    ctx.stroke();
-
     let minTs: number = pts[0].ts;
     let maxTs: number = pts[0].ts;
     let minR: number = pts[0].rssi;
@@ -288,7 +281,6 @@ export struct AdvertTab {
         })
     }
     .width('100%')
-    .height('100%')
     .alignItems(HorizontalAlign.Start)
   }
 }

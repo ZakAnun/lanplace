@@ -207,6 +207,37 @@ export struct WorkbenchShell {
     .width('100%')
   }
 
+  private tabUsesOuterScroll(): boolean {
+    return this.activeTab !== WorkbenchTabId.Log;
+  }
+
+  @Builder
+  tabScrollHost() {
+    if (this.tabUsesOuterScroll()) {
+      Scroll() {
+        Column() {
+          this.tabContent()
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+        .padding({ bottom: 12 })
+      }
+      .scrollBar(BarState.Auto)
+      .width('100%')
+      .layoutWeight(1)
+      .constraintSize({ minHeight: 0 })
+    } else {
+      Column() {
+        this.tabContent()
+      }
+      .width('100%')
+      .height('100%')
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+      .constraintSize({ minHeight: 0 })
+    }
+  }
+
   @Builder
   tabContent() {
     if (this.activeTab === WorkbenchTabId.Overview) {
@@ -260,7 +291,6 @@ export struct WorkbenchShell {
         }
       }
       .width('100%')
-      .height('100%')
       .alignItems(HorizontalAlign.Start)
       .padding(8)
     }
@@ -278,11 +308,7 @@ export struct WorkbenchShell {
           this.onSelectTab(tab);
         }
       })
-      Column() {
-        this.tabContent()
-      }
-      .layoutWeight(1)
-      .width('100%')
+      this.tabScrollHost()
     }
     .width('100%')
     .layoutWeight(1)
@@ -303,7 +329,7 @@ export struct WorkbenchShell {
         .width(LANDSCAPE_RIGHT_RAIL_WIDTH)
         .height('100%')
       Column() {
-        this.tabContent()
+        this.tabScrollHost()
       }
       .layoutWeight(1)
       .height('100%')

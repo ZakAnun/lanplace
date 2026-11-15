@@ -78,8 +78,7 @@ export struct LanTab {
   }
 
   build() {
-    Scroll() {
-      Column({ space: 12 }) {
+    Column({ space: 12 }) {
       if (this.detailLine.length > 0) {
         this.fieldRow($r('app.string.workbench_lan_host'), this.detailLine)
       }
@@ -140,12 +139,8 @@ export struct LanTab {
             .width('100%')
         }
       }
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
     }
-    .scrollBar(BarState.Auto)
     .width('100%')
-    .height('100%')
+    .alignItems(HorizontalAlign.Start)
   }
 }
